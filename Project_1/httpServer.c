@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include "httpShared.h"
 
 int main(int argC, char **argV){
@@ -131,7 +125,10 @@ int main(int argC, char **argV){
     else
         printf("\nProper usage:\n\n"
             "./server <port>\n\n"
-            "Ensure that <port> is between 60000 and 60099.\n\n");
+            "*Ensure that <port> is between 60000 and 60099.\n\n"
+            "---------- OR ----------\n\n"
+            "./server\n\n"
+            "*Server port will default to 60032.\n\n");
 
     return 0;
 
