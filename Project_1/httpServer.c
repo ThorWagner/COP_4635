@@ -4,7 +4,7 @@ int main(int argC, char **argV){
 
     int serverFD = 0;
     int clientFD = 0;
-    int length = 0;
+    int addrLen = 0;
     int portNum = 0;
     int status = 0;
     int filesize = 0;
@@ -18,7 +18,7 @@ int main(int argC, char **argV){
     struct sockaddr_in servAddr;
     FILE *infile = NULL;
 
-    length = sizeof(servAddr);
+    addrLen = sizeof(servAddr);
 
     // Verify user input
     if(argC < 3){
@@ -37,7 +37,7 @@ int main(int argC, char **argV){
         else
             portNum = DEF_PORT;
 
-        // Create Server socket
+        // Create Server socket file descriptor
         serverFD = socket(AF_INET, SOCK_STREAM, 0);
         if(serverFD == 0){
 
@@ -52,7 +52,7 @@ int main(int argC, char **argV){
         servAddr.sin_port = htons(portNum);
 
         // Bind the Server socket
-        status = bind(serverFD, (struct sockaddr *)&servAddr, length);
+        status = bind(serverFD, (struct sockaddr *)&servAddr, addrLen);
         if(status < 0){
 
             fprintf(stderr, "Failed to bind socket.");
@@ -76,7 +76,7 @@ int main(int argC, char **argV){
 
             printf("\n++++++++++ Waiting for new connection ++++++++++\n\n");
             clientFD = accept(serverFD, (struct sockaddr *)&servAddr,
-                (socklen_t *)&length);
+                (socklen_t *)&addrLen);
             if(clientFD < 0){
 
                 fprintf(stderr, "Connection terminated unexpectedly.");
@@ -125,10 +125,10 @@ int main(int argC, char **argV){
     else
         printf("\nProper usage:\n\n"
             "./server <port>\n\n"
-            "*Ensure that <port> is between 60000 and 60099.\n\n"
+            "\t*Ensure that <port> is between 60000 and 60099.\n\n"
             "---------- OR ----------\n\n"
             "./server\n\n"
-            "*Server port will default to 60032.\n\n");
+            "\t*Server port will default to 60032.\n\n");
 
     return 0;
 
