@@ -1,5 +1,7 @@
 #include "httpShared.h"
 
+void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum);
+
 int main(int argC, char **argV){
 
     int serverFD = 0;
@@ -37,29 +39,7 @@ int main(int argC, char **argV){
         else
             portNum = DEF_PORT;
 
-        // Create Server socket file descriptor
-        serverFD = socket(AF_INET, SOCK_STREAM, 0);
-        if(serverFD == 0){
-
-            fprintf(stderr, "Failed to create socket.");
-            exit(EXIT_FAILURE);
-
-        }
-
-        memset(servAddr.sin_zero, 0, sizeof(servAddr.sin_zero));
-        servAddr.sin_family = AF_INET;
-        servAddr.sin_addr.s_addr = INADDR_ANY;
-        servAddr.sin_port = htons(portNum);
-
-        // Bind the Server socket
-        status = bind(serverFD, (struct sockaddr *)&servAddr, addrLen);
-        if(status < 0){
-
-            fprintf(stderr, "Failed to bind socket.");
-            close(serverFD);
-            exit(EXIT_FAILURE);
-
-        }
+        initServer(&serverFD, &servAddr, portNum);
 
         // Listen for incoming Client connections
         status = listen(serverFD, WAIT_SIZE);
@@ -131,6 +111,41 @@ int main(int argC, char **argV){
             "\t*Server port will default to 60032.\n\n");
 
     return 0;
+
+}
+
+void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum){
+
+    int addrLen = 0;
+    int status = 0;
+
+    addrLen = sizeof(struct sockaddr_in);
+    
+    // Create Server socket file descriptor
+    *serverFD = socket(AF_INET, SOCK_STREAM, 0);
+    if(*serverFD == 0){
+
+        fprintf(stderr, "Failed to create socket.");
+        exit(EXIT_FAILURE);
+
+    }
+
+    memset(servAddr, 0, addrLen);
+    servAddr->sin_family = AF_INET;
+    servAddr->sin_addr.s_addr = INADDR_ANY;
+    servAddr->sin_port = htons(portNum);
+
+    // Bind the Server socket
+    status = bind(*serverFD, (struct sockaddr *)servAddr, addrLen);
+    if(status < 0){
+
+        fprintf(stderr, "Failed to bind socket.");
+        close(*serverFD);
+        exit(EXIT_FAILURE);
+
+    }
+
+    return;
 
 }
 
