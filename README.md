@@ -5,5 +5,9 @@ of COP 4635. Currently the repository contains the following subdirectories and
 files:
 
 #### Project_1
+>httpClient.c
 >httpServer.c
+>httpShared.h
+>index.html
+>Makefile
 
