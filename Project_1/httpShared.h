@@ -10,6 +10,7 @@
     
     #define BUFFER_SIZE 4096
     #define HEADER_SIZE 75
+    #define DIRECTORY_SIZE 100
     #define DEF_PORT 60032
     #define WAIT_SIZE 10
 
