@@ -10,16 +10,9 @@ void sigintHandler(int sig);
 int main(int argC, char **argV){
 
     int serverFD = 0;
-//    int clientFD = 0;
-//    int addrLen = 0;
     int portNum = 0;
     int status = 0;
-//    int long valRead = 0;
-//    char buff[BUFFER_SIZE] = {0};
-//    char *packet = NULL;
     struct sockaddr_in servAddr;
-
-//    addrLen = sizeof(servAddr);
 
     // Verify user input
     if(argC < 3){
@@ -43,7 +36,7 @@ int main(int argC, char **argV){
         // Handle signal interrupt [^C]
         signal(SIGINT, sigintHandler);
 
-        // Accept Client connections
+        // Accept Client connections and respond
         while(1){
 
             serverIntercom(serverFD, &servAddr);
