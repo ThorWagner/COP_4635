@@ -142,14 +142,13 @@ void buildResponse(char *buff, char **packet){
         strcpy(type, "image/gif");
     else if(strstr(filename, ".png") != NULL)
         strcpy(type, "image/png");
-    else if((strstr(filename, ".jpg") != NULL) || (strstr(filename, ".jpeg")
-        != NULL))
+    else if(strstr(filename, ".jp") != NULL)
         strcpy(type, "image/jpeg");
     else
         strcpy(type, "unknown");
     
     // Access requested file
-    infile = fopen(filename, "rb");
+    infile = fopen(filename, "r");
     if(infile != NULL){
 
         fseek(infile, 0, SEEK_END);
