@@ -70,7 +70,7 @@ int main(int argC, char **argV){
         printf("------------ Request sent ------------\n\n");
 
         // Receive response from Server
-        valRead = read(clientFD, buff, BUFFER_SIZE);
+        valRead = recv(clientFD, buff, BUFFER_SIZE, 0);
         if(valRead > 0)
             printf("%s\n\n", buff);
         else if(valRead == 0)
