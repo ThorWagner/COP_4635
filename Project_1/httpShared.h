@@ -21,6 +21,9 @@
     void buildHeader(char *buff, char *header, char *filename, int *filesize);
     void serverIntercom(int serverFD, struct sockaddr_in *servAddr);
     void sigintHandler(int sig);
+    void initClient(int *clientFD, struct sockaddr_in *servAddr, int portNum);
+    void buildRequest(char *file, char *header, int portNum);
+    void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, char *file);
 
 #endif /* HTTP_SHARED_H */
 
