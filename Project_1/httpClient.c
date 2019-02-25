@@ -1,15 +1,10 @@
-#include <arpa/inet.h>
 #include "httpShared.h"
-
-void initClient(int *clientFD, struct sockaddr_in *servAddr, int portNum);
-void buildRequest(char *file, char *header, int portNum);
-void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, char *file);
 
 int main(int argC, char **argV){
 
     int clientFD = 0;
     int portNum = 0;
-    char opt = 'y';
+    char opt = 0;
     char file[ARG_SIZE] = {0};
     struct sockaddr_in servAddr;
     
@@ -56,111 +51,6 @@ int main(int argC, char **argV){
     close(clientFD);
 
     return 0;
-
-}
-
-void initClient(int *clientFD, struct sockaddr_in *servAddr, int portNum){
-
-    int addrLen = 0;
-    int status = 0;
-
-    addrLen = sizeof(servAddr);
-
-    // Create Server socket file descriptor
-    *clientFD = socket(AF_INET, SOCK_STREAM, 0);
-    if(clientFD < 0){
-
-        fprintf(stderr, "Failed to create socket.");
-        exit(EXIT_FAILURE);
-
-    }
-
-    memset(servAddr, 0, addrLen);
-    servAddr->sin_family = AF_INET;
-    servAddr->sin_port = htons(portNum);
-
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    status = inet_pton(AF_INET, "127.0.0.1", &servAddr->sin_addr);
-    if(status <= 0){
-
-        fprintf(stderr, "Invalid address.");
-        close(*clientFD);
-        exit(EXIT_FAILURE);
-
-    }
-
-    return;
-
-}
-
-void buildRequest(char *file, char *header, int portNum){
-
-    char type[ARG_SIZE] = {0};
-    char *request = "GET /%s HTTP/1.1\r\n"
-                    "Host: localhost:%d\r\n"
-                    "Connection: keep-alive\r\n"
-                    "Content-Length: 0\r\n"
-                    "Content-Type: %s\r\n\r\n";
-
-    // Check for and set common file types
-    if(strstr(file, ".htm") != NULL)
-        strcpy(type, "text/html");
-    else if(strstr(file, ".ico") != NULL)
-        strcpy(type, "image/vnd.microsoft.icon");
-    else if(strstr(file, ".gif") != NULL)
-        strcpy(type, "image/gif");
-    else if(strstr(file, ".png") != NULL)
-        strcpy(type, "image/png");
-    else if(strstr(file, ".jp") != NULL)
-        strcpy(type, "image/jpeg");
-    else
-        strcpy(type, "unknown");
-
-    // Construct request header
-    sprintf(header, request, file, portNum, type);
-
-    return;
-
-}
-
-void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, char *file){
-
-    int status = 0;
-    int addrLen = 0;
-    int long valRead = 0;
-    char data[MAX_FILESIZE] = {0};
-    char header[HEADER_SIZE] = {0};
-
-    addrLen = sizeof(struct sockaddr_in);
-
-    // Construct request header based on user input
-    buildRequest(file, header, portNum);
-
-    // Connect to Server
-    printf("\n++++++++ Attempting to connect ++++++++\n\n");
-    status = connect(clientFD, (struct sockaddr *)servAddr, addrLen);
-    if(status < 0){
-
-        fprintf(stderr, "Failed to connect to server.\n\n");
-        close(clientFD);
-        exit(EXIT_FAILURE);
-
-    }
-    
-    // Send request to Server
-    send(clientFD, header, strlen(header), 0);
-    printf("------------ Request sent ------------\n\n%s", header);
-
-    // Receive response from Server
-    valRead = recv(clientFD, data, MAX_FILESIZE, 0);
-    if(valRead > 0)
-        printf("---------- Response received ----------\n\n%s", data);
-    else if(valRead == 0)
-        fprintf(stderr, "Server message was empty.\n\n");
-    else
-        fprintf(stderr, "Error reading server message.\n\n");
-
-    return;
 
 }
 
