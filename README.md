@@ -12,6 +12,6 @@ files:
 * httpServer.c
 * httpShared.h
 * index.html
-> #### images
-    * image1.gif
+* #### images
+  * image1.gif
 
