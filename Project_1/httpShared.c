@@ -38,12 +38,12 @@ void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum){
 
 }
 
-void setPort(int argC, char **argV, int *portNum){
+void setPort(int argC, char **argV, int *portNum, int numArgs){
 
     // Check for user-specified port number
-    if(argC == 2){
+    if(argC == numArgs){
 
-        *portNum = atoi(argV[1]);
+        *portNum = atoi(argV[numArgs - 1]);
         if((*portNum < 60000) || (*portNum > 60099)){
 
             printf("\n*Specify a port number between 60000 and 60099.\n\n");

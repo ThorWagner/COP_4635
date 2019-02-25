@@ -12,7 +12,7 @@ int main(int argC, char **argV){
     if(argC < 3){
 
         // Set port number according to user input or default
-        setPort(argC, argV, &portNum);
+        setPort(argC, argV, &portNum, 2);
 
         // Initialize Server port file descriptor and address
         initServer(&serverFD, &servAddr, portNum);
