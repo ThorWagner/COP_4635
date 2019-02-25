@@ -3,7 +3,9 @@
 
 void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum);
 void setPort(int argC, char **argV, int *portNum);
-void buildResponse(char *buff, char **packet);
+void buildHeader(char *buff, char *header, char *filename, int *filesize);
+//void sendFile(int clientFD, char *filename);
+//void buildResponse(char *buff, char *packet);
 void serverIntercom(int serverFD, struct sockaddr_in *servAddr);
 void sigintHandler(int sig);
 
@@ -116,15 +118,96 @@ void setPort(int argC, char **argV, int *portNum){
 
 }
 
-void buildResponse(char *buff, char **packet){
+void buildHeader(char *buff, char *header, char *filename, int *filesize){
+
+    char method[ARG_SIZE] = {0};
+    char version[ARG_SIZE] = {0};
+    char type[ARG_SIZE] = {0};
+    FILE *infile = NULL;
+
+    // Parse request line from Client
+    sscanf(buff, "%s %s %s", method, filename, version);
+    if(strcmp(filename, "/") == 0)
+        strcpy(filename, "/index.html");
+    strcpy(filename, filename + 1);
+
+    // Check for and set common file types
+    if(strstr(filename, ".htm") != NULL)
+        strcpy(type, "text/html");
+    else if(strstr(filename, ".ico") != NULL)
+        strcpy(type, "image/vnd.microsoft.icon");
+    else if(strstr(filename, ".gif") != NULL)
+        strcpy(type, "image/gif");
+    else if(strstr(filename, ".png") != NULL)
+        strcpy(type, "image/png");
+    else if(strstr(filename, ".jp") != NULL)
+        strcpy(type, "image/jpeg");
+    else
+        strcpy(type, "unknown");
+
+    // Access requested file
+    infile = fopen(filename, "rb");
+    if(infile != NULL){
+
+        // Calculate filesize
+        fseek(infile, 0, SEEK_END);
+        *filesize = ftell(infile);
+        fseek(infile, 0, SEEK_SET);
+
+        // Assemble 'OK' response header
+        sprintf(header, "%s 200 OK\nContent-Length: %d\nContent-Type: %s\n\n",
+            version, *filesize, type);
+
+        // Close file pointer
+        fclose(infile);
+
+    }
+    else{
+
+        // Calculate new filesize
+        strcpy(filename, "error404.html");
+        infile = fopen(filename, "rb");
+        fseek(infile, 0, SEEK_END);
+        *filesize = ftell(infile);
+        fseek(infile, 0, SEEK_SET);
+        
+        // Assemble 'Not Found' response header
+        sprintf(header, "%s 404 Not Found\nContent-Length: %d\nContent-Type: "
+            "%s\n\n", version, *filesize, "text/html");
+
+    }
+
+    return;
+
+}
+
+/*void sendFile(int clientFD, char *filename){
+
+    int bytesRead = 0;
+    char data[BLOCK_SIZE] = {0};
+    FILE *infile = NULL;
+
+    infile = fopen(filename, "rb");
+    if(infile != NULL)
+        while((bytesRead = fread(data, BLOCK_SIZE, 1, infile)) > 0)
+            send(clientFD, data, bytesRead, 0);
+    else
+        fprintf(stderr, "File closed unexpectedly.\n\n");
+
+    return;
+
+}
+
+void buildResponse(char *buff, char *packet){
 
     int filesize = 0;
-    char method[8] = {0};
-    char filename[DIRECTORY_SIZE] = {0};
-    char version[9] = {0};
-    char type[50] = {0};
-    char header[100] = {0};
-    char *data = NULL;
+//    int bytesRead = 0;
+    char method[ARG_SIZE] = {0};
+    char filename[ARG_SIZE] = {0};
+    char version[ARG_SIZE] = {0};
+    char type[ARG_SIZE] = {0};
+    char header[HEADER_SIZE] = {0};
+    char data[MAX_FILESIZE] = {0};
     FILE *infile = NULL;
 
     // Parse request line from Client
@@ -148,26 +231,27 @@ void buildResponse(char *buff, char **packet){
         strcpy(type, "unknown");
     
     // Access requested file
-    infile = fopen(filename, "r");
+    infile = fopen(filename, "rb");
     if(infile != NULL){
 
         fseek(infile, 0, SEEK_END);
         filesize = ftell(infile);
         fseek(infile, 0, SEEK_SET);
-        data = malloc((sizeof(char) * filesize) + 1);
+//        data = malloc((sizeof(char) * filesize) + 1);
         //memset(data, 0, filesize + 1);
-        fread(data, filesize, 1, infile);
+        fread(data, filesize + 1, 1, infile);
+//        printf("filesize = %d\t\tbytesRead = %d\n\n", filesize, bytesRead);
 
         // Assemble response header
         sprintf(header, "%s 200 OK\nContent-Type: %s\nContent-Length: %d\n\n",
             version, type, filesize);
 
         // Assemble full response
-        *packet = malloc(strlen(header) + filesize + 1);
-        strcpy(*packet, header);
-        strcat(*packet, data);
+//        *packet = malloc(strlen(header) + filesize + 1);
+        strcpy(packet, header);
+        strcat(packet, data);
 
-        free(data);
+//        free(data);
         fclose(infile);
 
     }
@@ -176,22 +260,26 @@ void buildResponse(char *buff, char **packet){
         sprintf(header, "%s 404 Not Found\nContent-Length: 0\nContent-Type: "
             "%s\n\n", version, type);
 
-        *packet = malloc(strlen(header) + 1);
-        strcpy(*packet, header);
+//        *packet = malloc(strlen(header) + 1);
+        strcpy(packet, header);
 
     }
 
     return;
 
-}
+}*/
 
 void serverIntercom(int serverFD, struct sockaddr_in *servAddr){
 
     int clientFD = 0;
     int addrLen = 0;
+    int filesize = 0;
     int long valRead = 0;
     char buff[BUFFER_SIZE] = {0};
-    char *packet = NULL;
+    char header[HEADER_SIZE] = {0};
+    char filename[ARG_SIZE] = {0};
+    char data[MAX_FILESIZE] = {0};
+    FILE *infile = NULL;
 
     addrLen = sizeof(struct sockaddr_in);
     
@@ -212,18 +300,19 @@ void serverIntercom(int serverFD, struct sockaddr_in *servAddr){
     if(valRead > 0){
 
         // Echo HTTP request
-        printf("%s\n\n", buff);
+        printf("%s", buff);
 
         // Construct HTTP response
-        buildResponse(buff, &packet);
+        buildHeader(buff, header, filename, &filesize);
 
         // Send HTTP response to Client
-        send(clientFD, packet, strlen(packet), 0);
+        send(clientFD, header, strlen(header), 0);
+        infile = fopen(filename, "rb");
+        fread(data, 1, filesize + 1, infile);
+        send(clientFD, data, filesize, 0);
+        fclose(infile);
 
-        printf("--------------- Response sent -----------------\n\n"
-            "%s\n\n", packet);
-
-        free(packet);
+        printf("--------------- Response sent -----------------\n\n%s", header);
 
     }
     else if(valRead == 0)
