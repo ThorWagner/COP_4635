@@ -5,9 +5,13 @@ of COP 4635. Currently the repository contains the following subdirectories and
 files:
 
 #### Project_1
+* Makefile
+* error404.html
+* favicon.ico
 * httpClient.c
 * httpServer.c
 * httpShared.h
 * index.html
-* Makefile
+> #### images
+    * image1.gif
 
