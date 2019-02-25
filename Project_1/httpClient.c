@@ -8,24 +8,17 @@ void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, cha
 int main(int argC, char **argV){
 
     int clientFD = 0;
-//    int addrLen = 0;
     int portNum = 0;
     char opt = 'y';
     char file[ARG_SIZE] = {0};
-//    int status = 0;
-//    int long valRead = 0;
-//    char buff[BUFFER_SIZE] = {0};
-//    char header[HEADER_SIZE] = {0};
-//    char *request = "Hello.";
     struct sockaddr_in servAddr;
-
-//    addrLen = sizeof(servAddr);
     
     // Verify user input
     if((argC > 1) && (argC < 4)){
 
         // Set port number according to user input or default
         setPort(argC, argV, &portNum, 3);
+        printf("Client started on port: %d\n\n", portNum);
 
         // Extract filename from user input
         if(argC == 2)
@@ -33,12 +26,13 @@ int main(int argC, char **argV){
         else
             strcpy(file, argV[2]);
 
-        // Initialize Server port file descriptor and address
-        initClient(&clientFD, &servAddr, portNum);
-
         while(1){
 
+            // Initialize Server port file descriptor and address
+            initClient(&clientFD, &servAddr, portNum);
+
             clientIntercom(clientFD, &servAddr, portNum, file);
+            close(clientFD);
             
             memset(file, 0, ARG_SIZE);
             printf("Would you like to make another request? [y/n]: ");
@@ -134,7 +128,7 @@ void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, cha
     int status = 0;
     int addrLen = 0;
     int long valRead = 0;
-    char buff[BUFFER_SIZE] = {0};
+    char data[MAX_FILESIZE] = {0};
     char header[HEADER_SIZE] = {0};
 
     addrLen = sizeof(struct sockaddr_in);
@@ -147,7 +141,7 @@ void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, cha
     status = connect(clientFD, (struct sockaddr *)servAddr, addrLen);
     if(status < 0){
 
-        fprintf(stderr, "Failed to connect to server.");
+        fprintf(stderr, "Failed to connect to server.\n\n");
         close(clientFD);
         exit(EXIT_FAILURE);
 
@@ -155,22 +149,16 @@ void clientIntercom(int clientFD, struct sockaddr_in *servAddr, int portNum, cha
     
     // Send request to Server
     send(clientFD, header, strlen(header), 0);
-    printf("------------ Request sent ------------\n\n%s\n\n", header);
+    printf("------------ Request sent ------------\n\n%s", header);
 
     // Receive response from Server
-    valRead = recv(clientFD, buff, BUFFER_SIZE, 0);
-    if(valRead > 0){
-
-        printf("---------- Response received ----------\n\n%s", buff);
-//        memset(buff, 0, BUFFER_SIZE);
-//        valRead = recv(clientFD, buff, BUFFER_SIZE, 0);
-        printf("%ld bytes recieved.\n\n", valRead);
-
-    }
+    valRead = recv(clientFD, data, MAX_FILESIZE, 0);
+    if(valRead > 0)
+        printf("---------- Response received ----------\n\n%s", data);
     else if(valRead == 0)
-        fprintf(stderr, "Server message was empty.");
+        fprintf(stderr, "Server message was empty.\n\n");
     else
-        fprintf(stderr, "Error reading server message.");
+        fprintf(stderr, "Error reading server message.\n\n");
 
     return;
 
