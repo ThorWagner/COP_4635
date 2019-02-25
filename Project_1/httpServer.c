@@ -40,8 +40,8 @@ int main(int argC, char **argV){
     }
     else
         printf("\nProper usage:\n\n"
-            "./server <port>\n\n"
-            "\t*Ensure that <port> is between 60000 and 60099.\n\n"
+            "./server [port]\n\n"
+            "\t*Ensure that [port] is between 60000 and 60099.\n\n"
             "---------- OR ----------\n\n"
             "./server\n\n"
             "\t*Server port will default to 60032.\n\n");
