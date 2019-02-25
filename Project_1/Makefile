@@ -15,5 +15,5 @@ httpShared.o : httpShared.c httpShared.h
 
 .PHONY : clean
 clean :
-	rm server httpServer.o client httpClient.o
+	rm server client httpServer.o httpClient.o httpShared.o
 
