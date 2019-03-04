@@ -15,3 +15,8 @@ files:
 * **images**
   * image1.gif
 
+### Project_2
+* Makefile
+* chatClient.c
+* chatServer.c
+
