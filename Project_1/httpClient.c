@@ -16,10 +16,7 @@ int main(int argC, char **argV){
         printf("Client started on port: %d\n\n", portNum);
 
         // Extract filename from user input
-        if(argC == 2)
-            strcpy(file, argV[1]);
-        else
-            strcpy(file, argV[2]);
+        strcpy(file, argV[1]);
 
         while(1){
 
@@ -42,10 +39,10 @@ int main(int argC, char **argV){
     }
     else
         printf("\nProper usage:\n\n"
-            "./client [port] [file]\n\n"
+            "./client [file] [port]\n\n"
             "\t*Ensure that [port] is between 60000 and 60099.\n\n"
             "---------- OR ----------\n\n"
-            "./client <message>\n\n"
+            "./client [file]\n\n"
             "\t*Server port will default to 60032.\n\n");
 
     close(clientFD);
