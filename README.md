@@ -13,7 +13,7 @@ files:
 * httpShared.c
 * httpShared.h
 * index.html
-* <span style="color:blue">**images/**</span>
+* [**images/**]()
   * image1.gif
 
 ### Project_2
