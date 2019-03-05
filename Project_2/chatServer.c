@@ -11,10 +11,11 @@
 #define DEF_PORT 60032
 #define BUFFER_SIZE 1024
 
-void initServer(int *socketFD, struct sockaddr_in *serverAddr);
+void initServer(int *serverFD, struct sockaddr_in *serverAddr);
 void broadcast(int i, int j, int socketFD, int bytesIn, char *inBuff, fd_set *master);
 void sendRecv(int i, int socketFD, int maxFD, fd_set *master);
 void connectClients(int socketFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master);
+void showError(char *errorMSG);
 
 int main(void){
 
@@ -64,50 +65,50 @@ int main(void){
 
 }
 
-void initServer(int *socketFD, struct sockaddr_in *serverAddr){
+void initServer(int *serverFD, struct sockaddr_in *serverAddr){
 
+    int addrLen = 0;
     int status = 0;
     int opt = 1;
 
-    *socketFD = socket(AF_INET, SOCK_STREAM, 0);
-    if(*socketFD == -1){
+    addrLen = sizeof(struct sockaddr_in);
 
-        perror("Socket");
-        exit(EXIT_FAILURE);
+    // Create Server socket file descriptor
+    *serverFD = socket(AF_INET, SOCK_STREAM, 0);
+    if(*serverFD == -1)
+        showError("Failed to create socket.");
 
-    }
-
+    memset(serverAddr, 0, addrLen);
     serverAddr->sin_family = AF_INET;
-    serverAddr->sin_port = htons(DEF_PORT);
     serverAddr->sin_addr.s_addr = INADDR_ANY;
-    memset(serverAddr->sin_zero, 0, sizeof(serverAddr->sin_zero));
+    serverAddr->sin_port = htons(DEF_PORT);
 
-    status = setsockopt(*socketFD, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    // Allow the Server socket to be reused
+    status = setsockopt(*serverFD, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    if(status == -1)
+        showError("Failed to configure socket.");
+
+    // Bind the Server socket
+    status = bind(*serverFD, (struct sockaddr *)serverAddr, addrLen);
     if(status == -1){
 
-        perror("setsockopt()");
-        exit(EXIT_FAILURE);
+        close(*serverFD);
+        showError("Failed to bind socket.");
 
     }
 
-    status = bind(*socketFD, (struct sockaddr *)serverAddr, sizeof(struct sockaddr));
-    if(status == -1){
-
-        perror("Bind");
-        exit(EXIT_FAILURE);
-
-    }
-
-    status = listen(*socketFD, 10);
-    if(status == -1){
-
-        perror("Listen");
-        exit(EXIT_FAILURE);
-
-    }
-
-    printf("\nWaiting for clients on port %d\n", DEF_PORT);
+    // Output success message
+    printf("\nServer started on port:: %d\n\n", DEF_PORT);
     fflush(stdout);
+
+    // Listen for incoming Client connections
+    status = listen(*serverFD, 10);
+    if(status == -1){
+
+        close(*serverFD);
+        showError("Failed to connect.");
+
+    }
 
     return;
 
@@ -185,6 +186,13 @@ void connectClients(int socketFD, int *maxFD, struct sockaddr_in *clientAddr, fd
     }
 
     return;
+
+}
+
+void showError(char *errorMSG){
+
+    fprintf(stderr, "\n%s\n\n", errorMSG);
+    exit(EXIT_FAILURE);
 
 }
 
