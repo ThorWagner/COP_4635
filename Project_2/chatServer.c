@@ -1,22 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <errno.h>
-
-#define DEF_PORT 60032
-#define BUFFER_SIZE 1024
-#define WAIT_SIZE 10
+#include "chatShared.h"
 
 void initServer(int *serverFD, struct sockaddr_in *serverAddr);
 void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *master);
 void sendRecv(int i, int serverFD, int maxFD, fd_set *master);
 void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master);
-void showError(char *errorMSG);
 
 int main(void){
 
@@ -186,13 +173,6 @@ void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_
     }
 
     return;
-
-}
-
-void showError(char *errorMSG){
-
-    fprintf(stderr, "\n%s\n\n", errorMSG);
-    exit(EXIT_FAILURE);
 
 }
 

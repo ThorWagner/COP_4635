@@ -1,15 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <errno.h>
-
-#define DEF_PORT 60032
-#define BUFFER_SIZE 1024
+#include "chatShared.h"
 
 void initClient(int *socketFD, struct sockaddr_in *serverAddr);
 void sendRecv(int i, int socketFD);
