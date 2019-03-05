@@ -13,7 +13,7 @@ files:
 * httpShared.c
 * httpShared.h
 * index.html
-* [**images/**](self)
+* [**images/**](README.md)
   * image1.gif
 
 ### Project_2
