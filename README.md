@@ -10,6 +10,7 @@ files:
 * favicon.ico
 * httpClient.c
 * httpServer.c
+* httpShared.c
 * httpShared.h
 * index.html
 * **images/**
@@ -19,4 +20,6 @@ files:
 * Makefile
 * chatClient.c
 * chatServer.c
+* chatShared.c
+* chatShared.h
 
