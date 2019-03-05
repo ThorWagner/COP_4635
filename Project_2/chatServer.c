@@ -10,50 +10,54 @@
 
 #define DEF_PORT 60032
 #define BUFFER_SIZE 1024
+#define WAIT_SIZE 10
 
 void initServer(int *serverFD, struct sockaddr_in *serverAddr);
-void broadcast(int i, int j, int socketFD, int bytesIn, char *inBuff, fd_set *master);
-void sendRecv(int i, int socketFD, int maxFD, fd_set *master);
-void connectClients(int socketFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master);
+void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *master);
+void sendRecv(int i, int serverFD, int maxFD, fd_set *master);
+void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master);
 void showError(char *errorMSG);
 
 int main(void){
 
     int i = 0;
-    int socketFD = 0;
+    int serverFD = 0;
     int maxFD = 0;
     int status = 0;
     struct sockaddr_in serverAddr;
     struct sockaddr_in clientAddr;
     fd_set master;
-    fd_set listFD;
+    fd_set temp;
 
+    // Initialize file descriptor lists as empty
     FD_ZERO(&master);
-    FD_ZERO(&listFD);
-    initServer(&socketFD, &serverAddr);
-    FD_SET(socketFD, &master);
+    FD_ZERO(&temp);
 
-    maxFD = socketFD;
+    // Initialize Server port file descriptor and address
+    initServer(&serverFD, &serverAddr);
+
+    // Add Server 'listening' port to file descriptor master list
+    FD_SET(serverFD, &master);
+
+    maxFD = serverFD;
     while(1){
 
-        listFD = master;
+        // Backup master list to expendable temp list
+        temp = master;
 
-        status = select(maxFD + 1, &listFD, NULL, NULL, NULL);
-        if(status == -1){
-
-            perror("Select");
-            exit(EXIT_FAILURE);
-
-        }
+        // Wait for Client activity
+        status = select(maxFD + 1, &temp, NULL, NULL, NULL);
+        if(status == -1)
+            showError("Failed to select active client.");
 
         for(i = 0; i <= maxFD; i++){
 
-            if(FD_ISSET(i, &listFD)){
+            if(FD_ISSET(i, &temp)){
 
-                if(i == socketFD)
-                    connectClients(socketFD, &maxFD, &clientAddr, &master);
+                if(i == serverFD)
+                    connectClient(serverFD, &maxFD, &clientAddr, &master);
                 else
-                    sendRecv(i, socketFD, maxFD, &master);
+                    sendRecv(i, serverFD, maxFD, &master);
 
             }
 
@@ -73,7 +77,7 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr){
 
     addrLen = sizeof(struct sockaddr_in);
 
-    // Create Server socket file descriptor
+    // Create Server socket file descriptor and address
     *serverFD = socket(AF_INET, SOCK_STREAM, 0);
     if(*serverFD == -1)
         showError("Failed to create socket.");
@@ -102,7 +106,7 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr){
     fflush(stdout);
 
     // Listen for incoming Client connections
-    status = listen(*serverFD, 10);
+    status = listen(*serverFD, WAIT_SIZE);
     if(status == -1){
 
         close(*serverFD);
@@ -114,17 +118,17 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr){
 
 }
 
-void broadcast(int i, int j, int socketFD, int bytesIn, char *inBuff, fd_set *master){
+void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *master){
 
     int status = 0;
 
     if(FD_ISSET(j, master) != 0){
 
-        if((j != socketFD) && (j != i)){
+        if((j != serverFD) && (j != i)){
 
             status = send(j, inBuff, bytesIn, 0);
             if(status == -1)
-                perror("Send Message");
+                fprintf(stderr, "Failed to send message");
 
         }
 
@@ -134,7 +138,7 @@ void broadcast(int i, int j, int socketFD, int bytesIn, char *inBuff, fd_set *ma
 
 }
 
-void sendRecv(int i, int socketFD, int maxFD, fd_set *master){
+void sendRecv(int i, int serverFD, int maxFD, fd_set *master){
 
     int j = 0;
     int bytesIn = 0;
@@ -146,7 +150,7 @@ void sendRecv(int i, int socketFD, int maxFD, fd_set *master){
         if(bytesIn == 0)
             printf("Socket %d disconnected\n", i);
         else
-            perror("Receive Message");
+            fprintf(stderr, "\nError receiving message.");
 
         close(i);
         FD_CLR(i, master);
@@ -154,26 +158,22 @@ void sendRecv(int i, int socketFD, int maxFD, fd_set *master){
     }
     else
         for(j = 0; j <= maxFD; j++)
-            broadcast(i, j, socketFD, bytesIn, inBuff, master);
+            broadcast(i, j, serverFD, bytesIn, inBuff, master);
 
     return;
 
 }
-void connectClients(int socketFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master){
+void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master){
 
     int addrLen = 0;
     int clientFD = 0;
 
     addrLen = sizeof(struct sockaddr_in);
     
-    clientFD = accept(socketFD, (struct sockaddr *)clientAddr,
+    clientFD = accept(serverFD, (struct sockaddr *)clientAddr,
         (socklen_t *)&addrLen);
-    if(clientFD == -1){
-
-        perror("Accept");
-        exit(EXIT_FAILURE);
-
-    }
+    if(clientFD == -1)
+        showError("Failed to accept client connection");
     else{
 
         FD_SET(clientFD, master);
