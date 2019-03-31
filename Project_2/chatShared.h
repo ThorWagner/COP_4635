@@ -14,6 +14,7 @@
     #define DEF_PORT 60032
     #define BUFFER_SIZE 1024
     #define WAIT_SIZE 10
+    #define PARAM_SIZE 20
 
     void showError(char *errorMSG);
 
