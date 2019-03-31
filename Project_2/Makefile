@@ -15,4 +15,4 @@ chatShared.o : chatShared.c chatShared.h
 
 .PHONY : clean
 clean :
-	rm server chatServer.o client chatClient.o
+	rm server chatServer.o client chatClient.o chatShared.o
