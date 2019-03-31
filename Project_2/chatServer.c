@@ -1,9 +1,14 @@
+#include <stdbool.h>
 #include "chatShared.h"
 
+#define FILENAME "database.dat"
+
 void initServer(int *serverFD, struct sockaddr_in *serverAddr);
-void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *master);
-void sendRecv(int i, int serverFD, int maxFD, fd_set *master);
-void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master);
+void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff,
+    fd_set *master);
+void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients);
+void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr,
+    fd_set *master, int *numClients);
 
 int main(void){
 
@@ -11,6 +16,7 @@ int main(void){
     int serverFD = 0;
     int maxFD = 0;
     int status = 0;
+    int numClients = 0;
     struct sockaddr_in serverAddr;
     struct sockaddr_in clientAddr;
     fd_set master;
@@ -42,11 +48,14 @@ int main(void){
             if(FD_ISSET(i, &temp)){
 
                 if(i == serverFD)
-                    connectClient(serverFD, &maxFD, &clientAddr, &master);
+                    connectClient(serverFD, &maxFD, &clientAddr, &master,
+                        &numClients);
                 else
-                    sendRecv(i, serverFD, maxFD, &master);
+                    sendRecv(i, serverFD, maxFD, &master, &numClients);
 
             }
+
+            printf("Number of Clients: %d\n\n", numClients);
 
         }
 
@@ -105,7 +114,8 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr){
 
 }
 
-void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *master){
+void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff,
+    fd_set *master){
 
     int status = 0;
 
@@ -125,17 +135,26 @@ void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff, fd_set *ma
 
 }
 
-void sendRecv(int i, int serverFD, int maxFD, fd_set *master){
+void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
 
     int j = 0;
     int bytesIn = 0;
+    int msgCode = 0;
     char inBuff[BUFFER_SIZE] = {0};
+    char search[3 * PARAM_SIZE] = {0};
+    bool found = false;
+    FILE *database = NULL;
 
     bytesIn = recv(i, inBuff, BUFFER_SIZE, 0);
     if(bytesIn <= 0){
 
-        if(bytesIn == 0)
+        if(bytesIn == 0){
+
             printf("Socket %d disconnected\n", i);
+
+            *numClients -= 1;
+
+        }
         else
             fprintf(stderr, "\nError receiving message.");
 
@@ -143,14 +162,68 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master){
         FD_CLR(i, master);
 
     }
-    else
-        for(j = 0; j <= maxFD; j++)
-            broadcast(i, j, serverFD, bytesIn, inBuff, master);
+    else{
+
+        sscanf(inBuff, "%d-%[^\n]", &msgCode, inBuff);
+
+        switch(msgCode){
+
+            case 1:
+                database = fopen(FILENAME, "a");
+
+                printf("%s\n", inBuff);
+                fprintf(database, "%s\n", inBuff);
+
+                fclose(database);
+
+                break;
+
+            case 2:
+                database = fopen(FILENAME, "r");
+
+                memset(search, 0, 3 * PARAM_SIZE);
+                while(!feof(database)){
+
+                    fscanf(database, "%s", search);
+
+                    if(strcmp(inBuff, search) == 0){
+
+                        found = true;
+                        break;
+
+                    }
+
+                }
+
+                if(found)
+                    send(i, "1", 1, 0);
+                else
+                    send(i, "0", 1, 0);
+
+                fclose(database);
+
+                break;
+            
+            case 22:
+                for(j = 0; j <= maxFD; j++)
+                    broadcast(i, j, serverFD, strlen(inBuff), inBuff, master);
+
+                break;
+
+            default:
+                printf("A mistake was made...");
+                break;
+
+        }
+
+    }
 
     return;
 
 }
-void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_set *master){
+
+void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr,
+    fd_set *master, int *numClients){
 
     int addrLen = 0;
     int clientFD = 0;
@@ -169,6 +242,8 @@ void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr, fd_
 
         printf("New connection from %s on port %d\n",
             inet_ntoa(clientAddr->sin_addr), ntohs(clientAddr->sin_port));
+
+        *numClients += 1;
 
     }
 
