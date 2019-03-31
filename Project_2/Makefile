@@ -3,14 +3,15 @@ CC = gcc
 
 all : chatServer chatClient
 
-chatServer : chatServer.o
-	$(CC) $(CFLAGS) -o server chatServer.c
+chatServer : chatServer.o chatShared.o
+	$(CC) $(CFLAGS) -o server chatServer.o chatShared.o
 
-chatClient : chatClient.o
-	$(CC) $(CFLAGS) -o client chatClient.c
+chatClient : chatClient.o chatShared.o
+	$(CC) $(CFLAGS) -o client chatClient.o chatShared.o
 
 chatServer.o : chatServer.c chatShared.h
 chatClient.o : chatClient.c chatShared.h
+chatShared.o : chatShared.c chatShared.h
 
 .PHONY : clean
 clean :
