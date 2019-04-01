@@ -7,6 +7,8 @@ typedef struct cred{
     char user[PARAM_SIZE];
     char pass[PARAM_SIZE];
     struct cred *next;
+    bool online;
+    int port;
 }cred;
 
 void initServer(int *serverFD, struct sockaddr_in *serverAddr);
@@ -23,6 +25,10 @@ bool searchDatabase(cred *head, char *combined);
 void addCredentials(cred *head, char *combined);
 void updateCredentials(cred *head, char *combined);
 void storeDatabase(cred *head, char *filename);
+void setOnline(cred *head, char *combined, int i);
+int numOnline(cred *head);
+void setOffline(cred *head, int i);
+int getUserPort(cred *head, char *recipient);
 
 // Global Variables
 cred *g_head = NULL;
@@ -81,7 +87,7 @@ int main(void){
 
             }
 
-            printf("Number of Clients: %d\n\n", numClients);
+            printf("Number of Clients: %d\n\n", numOnline(g_head));
 
         }
 
@@ -166,12 +172,14 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     int j = 0;
     int bytesIn = 0;
     int msgCode = 0;
+    int privatePort = 0;
     char inBuff[BUFFER_SIZE] = {0};
     char outBuff[BUFFER_SIZE] = {0};
-//    char search[3 * PARAM_SIZE] = {0};
-//    char currentID[PARAM_SIZE] = {0};
+    char recipient[PARAM_SIZE] = {0};
+    char privateMsg[BUFFER_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
     bool found = false;
-//    FILE *database = NULL;
 
     bytesIn = recv(i, inBuff, BUFFER_SIZE, 0);
     if(bytesIn <= 0){
@@ -186,6 +194,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
         else
             fprintf(stderr, "\nError receiving message.");
 
+        setOffline(g_head, i);
         close(i);
         FD_CLR(i, master);
 
@@ -205,8 +214,13 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
             case 2:
                 found = searchDatabase(g_head, inBuff);
 
-                if(found == true)
+                if(found == true){
+
+                    setOnline(g_head, inBuff, i);
+
                     send(i, "1", 1, 0);
+
+                }
                 else
                     send(i, "0", 1, 0);
 
@@ -221,6 +235,21 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
             case 22:
                 for(j = 0; j <= maxFD; j++)
                     broadcast(i, j, serverFD, strlen(inBuff), inBuff, master);
+
+                break;
+
+            case 23:
+                token = strtok(inBuff, delim);
+                strcpy(recipient, token);
+                //token = strtok(NULL, delim);
+                strcpy(privateMsg, inBuff + strlen(recipient) + 1);
+
+                privatePort = getUserPort(g_head, recipient);
+                if(privatePort > 0)
+                    send(privatePort, privateMsg, strlen(privateMsg), 0);
+                else
+                    send(i, "User unavailable.", 17, 0);
+
 
                 break;
 
@@ -290,6 +319,8 @@ void clearCredentials(cred *node){
     memset(node->user, 0, PARAM_SIZE);
     memset(node->pass, 0, PARAM_SIZE);
     node->next = NULL;
+    node->online = false;
+    node->port = 0;
 
     return;
 
@@ -513,6 +544,96 @@ void storeDatabase(cred *head, char *filename){
     fclose(database);
 
     return;
+
+}
+
+void setOnline(cred *head, char *combined, int i){
+
+    char username[PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    cred *current = NULL;
+
+    current = head;
+
+    token = strtok(combined, delim);
+    strcpy(username, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0)
+            break;
+
+        current = current->next;
+
+    }
+
+    current->online = true;
+    current->port = i;
+
+    return;
+
+}
+
+int numOnline(cred *head){
+
+    int i = 0;
+    cred *current = NULL;
+
+    current = head;
+    while(current != NULL){
+
+        if(current->online == true)
+            i++;
+
+        current = current->next;
+
+    }
+
+    return i;
+
+}
+
+void setOffline(cred *head, int i){
+
+    cred *current = NULL;
+
+    current = head;
+    while(current != NULL){
+
+        if(current->port == i)
+            break;
+
+        current = current->next;
+
+    }
+
+    current->online = false;
+    current->port = 0;
+
+    return;
+
+}
+
+int getUserPort(cred *head, char *recipient){
+
+    int port = 0;
+    cred *current = NULL;
+
+    current = head;
+    while(current != head){
+
+        if(strcmp(current->user, recipient) == 0)
+            break;
+
+        current = current->next;
+
+    }
+
+    if(current->online == true)
+        port = current->port;
+
+    return port;
 
 }
 

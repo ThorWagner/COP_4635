@@ -2,6 +2,7 @@
 
 void initClient(int *socketFD, struct sockaddr_in *serverAddr);
 bool sendRecv(int i, int socketFD, char *currentID);
+void updateLog(char *currentID, char *msg);
 
 int main(void){
 
@@ -178,6 +179,8 @@ int main(void){
 
                                     for(i = 0; i <= maxFD; i++){
 
+                                        exitFlag = false;
+
                                         if(FD_ISSET(i, &listFD) != 0)
                                             exitFlag = sendRecv(i, socketFD,
                                                 currentID);
@@ -193,12 +196,30 @@ int main(void){
 
                             case 3:
                                 printf("\n\n-=| PRIVATE CHAT |=-\n\n");
+
+                                memset(user, 0, PARAM_SIZE);
+                                printf("Enter the recipient username: ");
+                                scanf("\n\n%s", user);
+
+                                memset(msg1, 0, PARAM_SIZE);
+                                printf("Enter message: ");
+                                scanf("\n\n%[^\n]", msg1);
+
+                                memset(msg2, 0, PARAM_SIZE);
+                                sprintf(msg2, "23-%s:(private)%s: ", user,
+                                    currentID);
+                                strcat(msg2, msg1);
+                                send(socketFD, msg2, strlen(msg2), 0);
+
+                                updateLog(currentID, strcat("(private)Me: ",
+                                    msg1));
+
                                 break;
 
                             case 4:
-                                opt3 = 99;
-
                                 do{
+
+                                    opt3 = 99;
 
                                     printf("\n\n-=| CHAT HISTORY |=-\n\n"
                                         "1: Group Chat\n"
@@ -404,8 +425,13 @@ bool sendRecv(int i, int socketFD, char *currentID){
         strcat(outBuff, temp);
         if(strcmp(temp, "ESC") == 0)
             exitFlag = true;
-        else
+        else{
+
             send(socketFD, outBuff, strlen(outBuff), 0);
+
+            updateLog(currentID, temp);
+
+        }
 
     }
     else{
@@ -414,9 +440,26 @@ bool sendRecv(int i, int socketFD, char *currentID){
         printf("%s\n", inBuff);
         fflush(stdout);
 
+        updateLog(currentID, inBuff);
+
     }
 
     return exitFlag;
+
+}
+
+void updateLog(char *currentID, char *msg){
+
+    char filename[2 * PARAM_SIZE] = {0};
+    FILE *outfile = NULL;
+
+    sprintf(filename, "%s.dat", currentID);
+
+    outfile = fopen(filename, "a");
+    fprintf(outfile, "%s\n", msg);
+    fclose(outfile);
+
+    return;
 
 }
 
