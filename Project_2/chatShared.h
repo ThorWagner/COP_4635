@@ -1,3 +1,8 @@
+/*
+ * Michael Wagner
+ * COP 4635 - Project 2
+ */
+
 #ifndef CHAT_SHARED_H
 #define CHAT_SHARED_H
 

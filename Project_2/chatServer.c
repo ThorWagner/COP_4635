@@ -1,3 +1,8 @@
+/*
+ * Michael Wagner
+ * COP 4635 - Project 2
+ */
+
 #include <signal.h>
 #include "chatShared.h"
 
