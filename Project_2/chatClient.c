@@ -21,7 +21,9 @@ int main(void){
     char new[PARAM_SIZE] = {0};
     char msg1[BUFFER_SIZE] = {0};
     char msg2[BUFFER_SIZE] = {0};
+    char logfile[2 * PARAM_SIZE] = {0};
     bool exitFlag = false;
+    FILE *infile = NULL;
     struct sockaddr_in serverAddr;
     fd_set master;
     fd_set listFD;
@@ -228,12 +230,64 @@ int main(void){
                                         "Enter an option: ");
                                     scanf("\n\n%d", &opt3);
 
+
                                     switch(opt3){
 
                                         case 1:
+                                            printf("\n-=| GROUP CHAT HISTORY "
+                                                "|=-\n\n");
+
+                                            sprintf(logfile, "%s.dat",
+                                                currentID);
+                                            printf("%s\n", logfile);
+                                            infile = fopen(logfile, "r");
+
+                                            if(infile != NULL){
+                                            
+                                                while(fgets(msg1,
+                                                    3 * PARAM_SIZE,
+                                                    infile) != NULL){
+
+                                                    if(strncmp(msg1,
+                                                        "(private)", 9) != 0)
+                                                        printf("%s", msg1);
+
+                                                }
+
+                                            }
+                                            else
+                                                printf("Log file unavailable.\n");
+
+                                            fclose(infile);
+
                                             break;
 
                                         case 2:
+                                            printf("\n-=| PRIVATE CHAT HISTORY "
+                                                "|=-\n\n");
+
+                                            sprintf(logfile, "%s.dat",
+                                                currentID);
+                                            infile = fopen(logfile, "r");
+
+                                            if(infile != NULL){
+
+                                                while(fgets(msg1,
+                                                    3 * PARAM_SIZE,
+                                                    infile) != NULL){
+
+                                                    if(strncmp(msg1,
+                                                        "(private)", 9) == 0)
+                                                    printf("%s", msg1);
+
+                                                }
+
+                                            }
+                                            else
+                                                printf("Log file unavailable\n");
+
+                                            fclose(infile);
+
                                             break;
 
                                         case 0:
