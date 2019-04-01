@@ -1,7 +1,13 @@
-#include <stdbool.h>
+#include <signal.h>
 #include "chatShared.h"
 
 #define FILENAME "database.dat"
+
+typedef struct cred{
+    char user[PARAM_SIZE];
+    char pass[PARAM_SIZE];
+    struct cred *next;
+}cred;
 
 void initServer(int *serverFD, struct sockaddr_in *serverAddr);
 void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff,
@@ -9,6 +15,17 @@ void broadcast(int i, int j, int serverFD, int bytesIn, char *inBuff,
 void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients);
 void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr,
     fd_set *master, int *numClients);
+void clearCredentials(cred *node);
+void buildDatabase(cred *head, char *filename);
+void destroyDatabase(cred *head);
+void sigintHandler(int sig);
+bool searchDatabase(cred *head, char *combined);
+void addCredentials(cred *head, char *combined);
+void updateCredentials(cred *head, char *combined);
+void storeDatabase(cred *head, char *filename);
+
+// Global Variables
+cred *g_head = NULL;
 
 int main(void){
 
@@ -21,6 +38,12 @@ int main(void){
     struct sockaddr_in clientAddr;
     fd_set master;
     fd_set temp;
+    //cred *head = NULL;
+
+    // Read in user database
+    g_head = malloc(sizeof(cred));
+    clearCredentials(g_head);
+    buildDatabase(g_head, FILENAME);
 
     // Initialize file descriptor lists as empty
     FD_ZERO(&master);
@@ -31,6 +54,9 @@ int main(void){
 
     // Add Server 'listening' port to file descriptor master list
     FD_SET(serverFD, &master);
+
+    // Handle signal interrupt [^C]
+    signal(SIGINT, sigintHandler);
 
     maxFD = serverFD;
     while(1){
@@ -141,9 +167,11 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     int bytesIn = 0;
     int msgCode = 0;
     char inBuff[BUFFER_SIZE] = {0};
-    char search[3 * PARAM_SIZE] = {0};
+    char outBuff[BUFFER_SIZE] = {0};
+//    char search[3 * PARAM_SIZE] = {0};
+//    char currentID[PARAM_SIZE] = {0};
     bool found = false;
-    FILE *database = NULL;
+//    FILE *database = NULL;
 
     bytesIn = recv(i, inBuff, BUFFER_SIZE, 0);
     if(bytesIn <= 0){
@@ -169,44 +197,50 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
         switch(msgCode){
 
             case 1:
-                database = fopen(FILENAME, "a");
-
-                printf("%s\n", inBuff);
-                fprintf(database, "%s\n", inBuff);
-
-                fclose(database);
+                addCredentials(g_head, inBuff);
+                storeDatabase(g_head, FILENAME);
 
                 break;
 
             case 2:
-                database = fopen(FILENAME, "r");
+                found = searchDatabase(g_head, inBuff);
 
-                memset(search, 0, 3 * PARAM_SIZE);
-                while(!feof(database)){
-
-                    fscanf(database, "%s", search);
-
-                    if(strcmp(inBuff, search) == 0){
-
-                        found = true;
-                        break;
-
-                    }
-
-                }
-
-                if(found)
+                if(found == true)
                     send(i, "1", 1, 0);
                 else
                     send(i, "0", 1, 0);
 
-                fclose(database);
+                break;
 
+            case 21:
+                memset(outBuff, 0, BUFFER_SIZE);
+                sprintf(outBuff, "%d", *numClients);
+                send(i, outBuff, strlen(outBuff), 0);
                 break;
             
             case 22:
                 for(j = 0; j <= maxFD; j++)
                     broadcast(i, j, serverFD, strlen(inBuff), inBuff, master);
+
+                break;
+
+            case 26:
+                found = searchDatabase(g_head, inBuff);
+
+                if(found == true){
+
+                    send(i, "1", 1, 0);
+
+                    memset(inBuff, 0, BUFFER_SIZE);
+                    recv(i, inBuff, BUFFER_SIZE, 0);
+
+                    updateCredentials(g_head, inBuff);
+
+                    storeDatabase(g_head, FILENAME);
+
+                }
+                else
+                    send(i, "0", 1, 0);
 
                 break;
 
@@ -246,6 +280,237 @@ void connectClient(int serverFD, int *maxFD, struct sockaddr_in *clientAddr,
         *numClients += 1;
 
     }
+
+    return;
+
+}
+
+void clearCredentials(cred *node){
+
+    memset(node->user, 0, PARAM_SIZE);
+    memset(node->pass, 0, PARAM_SIZE);
+    node->next = NULL;
+
+    return;
+
+}
+
+void buildDatabase(cred *head, char *filename){
+
+    char buffer[3 * PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    FILE *database = NULL;
+    cred *current = NULL;
+
+    current = head;
+
+    database = fopen(filename, "r");
+    if(database != NULL){
+
+        fscanf(database, "%s", buffer);
+        token = strtok(buffer, delim);
+        strcpy(current->user, token);
+        token = strtok(NULL, delim);
+        strcpy(current->pass, token);
+        
+        while(!feof(database)){
+
+            memset(buffer, 0, 3 * PARAM_SIZE);
+            fscanf(database, "%s", buffer);
+            if(strlen(buffer) > 0){
+
+                current->next = malloc(sizeof(cred));
+                current = current->next;
+                clearCredentials(current);
+
+                token = strtok(buffer, delim);
+                strcpy(current->user, token);
+                token = strtok(NULL, delim);
+                strcpy(current->pass, token);
+
+            }
+
+        }
+
+        current = head;
+        while(current != NULL){
+
+            printf("[%s]:[%s]\n", current->user, current->pass);
+            current = current->next;
+
+        }
+
+    }
+    else
+        showError("Could not access database.");
+
+    return;
+
+}
+
+void destroyDatabase(cred *head){
+
+    cred *current = NULL;
+    cred *prev = NULL;
+
+    current = head;
+    while(current != NULL){
+
+        if(current->next != NULL){
+
+            prev = current;
+            current = current->next;
+            free(prev);
+
+        }
+        else{
+
+            free(current);
+            current = NULL;
+
+        }
+
+    }
+
+    return;
+
+}
+
+void sigintHandler(int sig){
+
+    // Verify server process is ending
+    fprintf(stderr, "\nShutting down server...\n\n");
+
+    // Clean up data
+    destroyDatabase(g_head);
+
+    // Return SIGINT
+    exit(sig);
+
+}
+
+bool searchDatabase(cred *head, char *combined){
+
+    char username[PARAM_SIZE] = {0};
+    char password[PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    bool found = false;
+    cred *current = NULL;
+
+    current = head;
+
+    token = strtok(combined, delim);
+    strcpy(username, token);
+    token = strtok(NULL, delim);
+    strcpy(password, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0){
+
+            if(strcmp(current->pass, password) == 0){
+
+                found = true;
+                break;
+
+            }
+
+        }
+
+        current = current->next;
+
+    }
+
+    return found;
+
+}
+
+void addCredentials(cred *head, char *combined){
+
+    char username[PARAM_SIZE] = {0};
+    char password[PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    cred *current = NULL;
+    cred *prev = NULL;
+
+    current = head;
+
+    token = strtok(combined, delim);
+    strcpy(username, token);
+    token = strtok(NULL, delim);
+    strcpy(password, token);
+
+    while(current != NULL){
+
+        prev = current;
+        current = current->next;
+
+    }
+
+    prev->next = malloc(sizeof(cred));
+    current = prev->next;
+    clearCredentials(current);
+
+    strcpy(current->user, username);
+    strcpy(current->pass, password);
+
+    return;
+
+}
+
+void updateCredentials(cred *head, char *combined){
+
+    char username[PARAM_SIZE] = {0};
+    char password[PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    cred *current = NULL;
+
+    current = head;
+
+    token = strtok(combined, delim);
+    strcpy(username, token);
+    token = strtok(NULL, delim);
+    strcpy(password, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0){
+
+            strcpy(current->pass, password);
+            break;
+
+        }
+
+        current = current->next;
+
+    }
+
+    return;
+
+}
+
+void storeDatabase(cred *head, char *filename){
+
+    FILE *database = NULL;
+    cred *current = NULL;
+
+    database = fopen(filename, "w");
+
+    current = head;
+
+    while(current != NULL){
+
+        fprintf(database, "%s:%s\n", current->user, current->pass);
+
+        current = current->next;
+
+    }
+
+    fclose(database);
 
     return;
 

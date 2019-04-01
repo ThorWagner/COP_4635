@@ -1,7 +1,7 @@
 #include "chatShared.h"
 
 void initClient(int *socketFD, struct sockaddr_in *serverAddr);
-void sendRecv(int i, int socketFD);
+bool sendRecv(int i, int socketFD, char *currentID);
 
 int main(void){
 
@@ -9,11 +9,18 @@ int main(void){
     int socketFD = 0;
     int maxFD = 0;
     int current = 0;
-    int opt = 99;
+    int opt1 = 0;
+    int opt2 = 0;
+    int opt3 = 0;
     char user[PARAM_SIZE] = {0};
     char pass[PARAM_SIZE] = {0};
     char confirm[PARAM_SIZE] = {0};
-    char msg[BUFFER_SIZE] = {0};
+    char currentID[PARAM_SIZE] = {0};
+    char old[PARAM_SIZE] = {0};
+    char new[PARAM_SIZE] = {0};
+    char msg1[BUFFER_SIZE] = {0};
+    char msg2[BUFFER_SIZE] = {0};
+    bool exitFlag = false;
     struct sockaddr_in serverAddr;
     fd_set master;
     fd_set listFD;
@@ -30,28 +37,28 @@ int main(void){
     do{
 
         // Initial splash screen
+        opt1 = 99;
         printf("-=| WELCOME TO THE CHAT ROOM |=-\n\n"
             "1: Register\n"
             "2: Login\n"
             "0: Exit\n\n"
             "Enter an option: ");
-        scanf("\n\n%d", &opt);
-        printf("\n\n");
+        scanf("\n\n%d", &opt1);
 
-        switch(opt){
+        switch(opt1){
 
             // Register new user
             case 1:
-                printf("-=| REGISTER |=-\n\n");
+                printf("\n\n-=| REGISTER |=-\n\n");
 
                 // Get new username
                 do{
 
                     memset(user, 0, PARAM_SIZE);
-                    memset(confirm, 0, PARAM_SIZE);
-
                     printf("Enter a username: ");
                     scanf("\n\n%s", user);
+
+                    memset(confirm, 0, PARAM_SIZE);
                     printf("Confirm username: ");
                     scanf("\n\n%s", confirm);
 
@@ -78,60 +85,86 @@ int main(void){
 
                 printf("\n\n");
 
-                memset(msg, 0, BUFFER_SIZE);
-                sprintf(msg, "1-%s:%s", user, pass);
-                send(socketFD, msg, strlen(msg), 0);
+                memset(msg1, 0, BUFFER_SIZE);
+                sprintf(msg1, "1-%s:%s", user, pass);
+                send(socketFD, msg1, strlen(msg1), 0);
 
                 break;
 
             case 2:
-                printf("-=| USER LOGIN |=-\n\n");
+                printf("\n\n-=| USER LOGIN |=-\n\n");
 
-                memset(user, 0, PARAM_SIZE);
-                memset(pass, 0, PARAM_SIZE);
-                printf("Enter username: ");
-                scanf("%s", user);
-                printf("Enter password: ");
-                scanf("%s", pass);
+                if(strlen(currentID) != 0){
 
-                printf("\n\n");
+                    memset(msg1, 0, BUFFER_SIZE);
+                    strcpy(msg1, "1");
+                    
+                    printf("Welcome back %s!\n", currentID);
 
-                memset(msg, 0, BUFFER_SIZE);
-                sprintf(msg, "2-%s:%s", user, pass);
-                send(socketFD, msg, strlen(msg), 0);
+                }
+                else{
+                
+                    memset(user, 0, PARAM_SIZE);
+                    printf("Enter username: ");
+                    scanf("%s", user);
 
-                memset(msg, 0, BUFFER_SIZE);
-                recv(socketFD, msg, BUFFER_SIZE, 0);
+                    memset(pass, 0, PARAM_SIZE);
+                    printf("Enter password: ");
+                    scanf("%s", pass);
 
-                if(strcmp(msg, "1") == 0){
+                    memset(msg1, 0, BUFFER_SIZE);
+                    sprintf(msg1, "2-%s:%s", user, pass);
+                    send(socketFD, msg1, strlen(msg1), 0);
 
-                    opt = 99;
+                    memset(msg1, 0, BUFFER_SIZE);
+                    recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                }
+
+                if(strcmp(msg1, "1") == 0){
+
+                    strcpy(currentID, user);
+                    
                     do{
 
-                        printf("-=| MAIN MENU|=-\n\n"
-                            "1: View number of users currently online.\n"
-                            "2: Enter the group chat.\n"
-                            "3: Enter a private chat.\n"
-                            "4: View chat history.\n"
-                            "5: File transfer.\n"
-                            "6: Change password.\n"
+                        // Main menu after login
+                        opt2 = 99;
+                        printf("\n\n-=| MAIN MENU|=-\n\n"
+                            "1: View number of users currently online\n"
+                            "2: Enter the group chat\n"
+                            "3: Enter a private chat\n"
+                            "4: View chat history\n"
+                            "5: File transfer\n"
+                            "6: Change password\n"
                             "7: Logout\n"
                             "8: Administration\n"
                             "0: Return to the login screen\n\n"
                             "Enter an option: ");
-                        scanf("\n\n%d", &opt);
+                        scanf("\n\n%d", &opt2);
 
-                        printf("\n\n");
-
-                        switch(opt){
+                        switch(opt2){
 
                             case 1:
+                                printf("\n\n-=| VIEW NUMBER OF USERS CURRENTLY "
+                                    "ONLINE |=-\n\n");
+                                
+                                memset(msg1, 0, BUFFER_SIZE);
+                                sprintf(msg1, "21-users");
+                                send(socketFD, msg1, strlen(msg1), 0);
+
+                                memset(msg1, 0, BUFFER_SIZE);
+                                recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                printf("Users currently online: %s\n", msg1);
+
                                 break;
 
                             case 2:
-                                printf("-=| GROUP CHAT |=-\n\n");
+                                printf("\n\n-=| GROUP CHAT |=-\n\n"
+                                    "Type 'ESC' at any time to return to the "
+                                    "main menu.\n\n");
 
-                                while(1){
+                                while(exitFlag == false){
 
                                     listFD = master;
                                     current = select(maxFD + 1, &listFD, NULL,
@@ -143,29 +176,165 @@ int main(void){
 
                                     }
 
-                                    for(i = 0; i <= maxFD; i++)
+                                    for(i = 0; i <= maxFD; i++){
+
                                         if(FD_ISSET(i, &listFD) != 0)
-                                            sendRecv(i, socketFD);
+                                            exitFlag = sendRecv(i, socketFD,
+                                                currentID);
+
+                                        if(exitFlag == true)
+                                            break;
+
+                                    }
 
                                 }
 
                                 break;
 
+                            case 3:
+                                printf("\n\n-=| PRIVATE CHAT |=-\n\n");
+                                break;
+
+                            case 4:
+                                opt3 = 99;
+
+                                do{
+
+                                    printf("\n\n-=| CHAT HISTORY |=-\n\n"
+                                        "1: Group Chat\n"
+                                        "2: Private Chat\n"
+                                        "0: Back\n\n"
+                                        "Enter an option: ");
+                                    scanf("\n\n%d", &opt3);
+
+                                    switch(opt3){
+
+                                        case 1:
+                                            break;
+
+                                        case 2:
+                                            break;
+
+                                        case 0:
+                                            printf("\n\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n\n\n");
+                                            break;
+
+                                    }
+
+                                }while(opt3 != 0);
+
+                                break;
+
+                            case 5:
+                                opt3 = 99;
+
+                                do{
+
+                                    printf("\n\n-=| FILE TRANSFER |=-\n\n"
+                                        "1: Select file\n"
+                                        "2: Select object\n"
+                                        "0: Back\n\n");
+                                    scanf("\n\n%d", &opt3);
+
+                                    switch(opt3){
+
+                                        case 1:
+                                            break;
+
+                                        case 2:
+                                            break;
+
+                                        case 0:
+                                            printf("\n\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n\n\n");
+                                            break;
+
+                                        default:
+                                            printf("\nEnter a valid option."
+                                                "\n\n\n");
+                                            break;
+
+                                    }
+
+                                }while(opt3 != 0);
+
+                                break;
+
+                            case 6:
+                                printf("\n\n-=| CHANGE PASSWORD |=-\n\n");
+
+                                // Check that user has proper credentials
+                                do{
+
+                                    // Get current password
+                                    memset(old, 0, PARAM_SIZE);
+                                    printf("Enter old password: ");
+                                    scanf("\n\n%s", old);
+
+                                    // Send username and current password
+                                    memset(msg1, 0, BUFFER_SIZE);
+                                    sprintf(msg1, "26-%s:%s", currentID, old);
+                                    send(socketFD, msg1, strlen(msg1), 0);
+
+                                    // Get Server response
+                                    memset(msg1, 0, BUFFER_SIZE);
+                                    recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                    // Username and password combo incorrect
+                                    if(strcmp(msg1, "1") != 0)
+                                        printf("Incorrect password.\n");
+
+                                }while(strcmp(msg1, "1") != 0);
+
+                                // Get new password
+                                memset(new, 0, PARAM_SIZE);
+                                printf("Enter new password: ");
+                                scanf("\n\n%s", new);
+
+                                // Confirm new password
+                                do{
+
+                                    // Get new password again
+                                    memset(confirm, 0, PARAM_SIZE);
+                                    printf("Confirm new password: ");
+                                    scanf("\n\n%s", confirm);
+
+                                    // Second attempt was different
+                                    if(strcmp(new, confirm) != 0)
+                                        printf("The new passwords do not match."
+                                            "\n");
+
+                                }while(strcmp(new, confirm) != 0);
+
+                                // Send username and new password
+                                memset(msg2, 0, BUFFER_SIZE);
+                                sprintf(msg2, "%s:%s", currentID, new);
+                                send(socketFD, msg2, strlen(msg2), 0);
+
+                                break;
+
                             case 7:
-                                printf("Logging out...");
+                                printf("\n\n-=| LOGGING OUT |=-\n\n\n");
+                                memset(currentID, 0, PARAM_SIZE);
+                                break;
+
+                            case 8:
+                                printf("\n\n-=| ADMINISTRATOR |=-\n\n");
                                 break;
 
                             case 0:
-                                printf("Returning to the logic screen...");
+                                printf("\n\n-=| RETURNING TO LOGIN SCREEN |=-"
+                                    "\n\n\n");
                                 break;
 
                             default:
-                                printf("Select a valid option.\n\n\n");
+                                printf("\nSelect a valid option.\n\n\n");
                                 break;
 
                         }
 
-                    }while((opt != 0) && (opt != 7));
+                    }while((opt2 != 0) && (opt2 != 7));
 
                 }
                 else
@@ -174,16 +343,16 @@ int main(void){
                 break;
 
             case 0:
-                printf("Exiting...\n\n");
+                printf("\n\n-=| EXITING |=-\n\n\n");
                 break;
 
             default:
-                printf("\nSelect a valid option\n\n");
+                printf("\nSelect a valid option\n\n\n");
                 break;
 
         }
 
-    }while(opt != 0);
+    }while(opt1 != 0);
 
     close(socketFD);
 
@@ -221,20 +390,20 @@ void initClient(int *socketFD, struct sockaddr_in *serverAddr){
 
 }
 
-void sendRecv(int i, int socketFD){
+bool sendRecv(int i, int socketFD, char *currentID){
 
     char temp[BUFFER_SIZE] = {0};
     char inBuff[BUFFER_SIZE] = {0};
     char outBuff[BUFFER_SIZE] = {0};
-//    int bytesIn = 0;
+    bool exitFlag = false;
 
     if(i == 0){
 
         scanf("\n\n%[^\n]", temp);
-        strcpy(outBuff, "22-");
+        sprintf(outBuff, "22-%s: ", currentID);
         strcat(outBuff, temp);
-        if(strcmp(outBuff, "exit") == 0)
-            exit(EXIT_SUCCESS);
+        if(strcmp(temp, "ESC") == 0)
+            exitFlag = true;
         else
             send(socketFD, outBuff, strlen(outBuff), 0);
 
@@ -247,7 +416,7 @@ void sendRecv(int i, int socketFD){
 
     }
 
-    return;
+    return exitFlag;
 
 }
 
