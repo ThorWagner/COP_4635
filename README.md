@@ -22,4 +22,5 @@ files:
 * chatServer.c
 * chatShared.c
 * chatShared.h
+* database.dat
 
