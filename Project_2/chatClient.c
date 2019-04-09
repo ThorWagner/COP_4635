@@ -26,6 +26,7 @@ int main(void){
     char new[PARAM_SIZE] = {0};
     char msg1[BUFFER_SIZE] = {0};
     char msg2[BUFFER_SIZE] = {0};
+    char logMsg[BUFFER_SIZE] = "(private)Me: ";
     char logfile[2 * PARAM_SIZE] = {0};
     bool exitFlag = false;
     FILE *infile = NULL;
@@ -102,15 +103,7 @@ int main(void){
             case 2:
                 printf("\n\n-=| USER LOGIN |=-\n\n");
 
-                if(strlen(currentID) != 0){
-
-                    memset(msg1, 0, BUFFER_SIZE);
-                    strcpy(msg1, "1");
-                    
-                    printf("Welcome back %s!\n", currentID);
-
-                }
-                else{
+                if(strlen(currentID) == 0){
                 
                     memset(user, 0, PARAM_SIZE);
                     printf("Enter username: ");
@@ -126,6 +119,14 @@ int main(void){
 
                     memset(msg1, 0, BUFFER_SIZE);
                     recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                }
+                else{
+
+                    memset(msg1, 0, BUFFER_SIZE);
+                    strcpy(msg1, "1");
+                    
+                    printf("Welcome back %s!\n", currentID);
 
                 }
 
@@ -208,18 +209,17 @@ int main(void){
                                 printf("Enter the recipient username: ");
                                 scanf("\n\n%s", user);
 
-                                memset(msg1, 0, PARAM_SIZE);
+                                memset(msg1, 0, BUFFER_SIZE);
                                 printf("Enter message: ");
                                 scanf("\n\n%[^\n]", msg1);
 
-                                memset(msg2, 0, PARAM_SIZE);
+                                memset(msg2, 0, BUFFER_SIZE);
                                 sprintf(msg2, "23-%s:(private)%s: ", user,
                                     currentID);
                                 strcat(msg2, msg1);
                                 send(socketFD, msg2, strlen(msg2), 0);
 
-                                updateLog(currentID, strcat("(private)Me: ",
-                                    msg1));
+                                updateLog(currentID, strcat(logMsg, msg1));
 
                                 break;
 
@@ -417,8 +417,10 @@ int main(void){
                     }while((opt2 != 0) && (opt2 != 7));
 
                 }
+                else if(strcmp(msg1, "2") == 0)
+                    printf("\nThat user is already logged in!\n\n\n");
                 else
-                    printf("Invalid username or password.\n\n\n");
+                    printf("\nInvalid username or password.\n\n\n");
 
                 break;
 
