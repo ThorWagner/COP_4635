@@ -34,6 +34,7 @@ void setOnline(cred *head, char *combined, int i);
 int numOnline(cred *head);
 void setOffline(cred *head, int i);
 int getUserPort(cred *head, char *recipient);
+bool checkStatus(cred *head, char *combined);
 
 // Global Variables
 cred *g_head = NULL;
@@ -185,6 +186,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     char *token = NULL;
     char *delim = ":";
     bool found = false;
+    bool loggedIn = false;
 
     bytesIn = recv(i, inBuff, BUFFER_SIZE, 0);
     if(bytesIn <= 0){
@@ -218,12 +220,17 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
 
             case 2:
                 found = searchDatabase(g_head, inBuff);
-
                 if(found == true){
 
-                    setOnline(g_head, inBuff, i);
+                    loggedIn = checkStatus(g_head, inBuff);
+                    if(loggedIn == false){
 
-                    send(i, "1", 1, 0);
+                        setOnline(g_head, inBuff, i);
+                        send(i, "1", 1, 0);
+
+                    }
+                    else
+                        send(i, "2", 1, 0);
 
                 }
                 else
@@ -430,14 +437,16 @@ bool searchDatabase(cred *head, char *combined){
 
     char username[PARAM_SIZE] = {0};
     char password[PARAM_SIZE] = {0};
+    char temp[3 * PARAM_SIZE] = {0};
     char *token = NULL;
     char *delim = ":";
     bool found = false;
     cred *current = NULL;
 
     current = head;
+    strcpy(temp, combined);
 
-    token = strtok(combined, delim);
+    token = strtok(temp, delim);
     strcpy(username, token);
     token = strtok(NULL, delim);
     strcpy(password, token);
@@ -555,13 +564,15 @@ void storeDatabase(cred *head, char *filename){
 void setOnline(cred *head, char *combined, int i){
 
     char username[PARAM_SIZE] = {0};
+    char temp[3 * PARAM_SIZE] = {0};
     char *token = NULL;
     char *delim = ":";
     cred *current = NULL;
 
     current = head;
+    strcpy(temp, combined);
 
-    token = strtok(combined, delim);
+    token = strtok(temp, delim);
     strcpy(username, token);
 
     while(current != NULL){
@@ -606,15 +617,17 @@ void setOffline(cred *head, int i){
     current = head;
     while(current != NULL){
 
-        if(current->port == i)
+        if(current->port == i){
+
+            current->online = false;
+            current->port = 0;
             break;
+
+        }
 
         current = current->next;
 
     }
-
-    current->online = false;
-    current->port = 0;
 
     return;
 
@@ -626,19 +639,62 @@ int getUserPort(cred *head, char *recipient){
     cred *current = NULL;
 
     current = head;
-    while(current != head){
+    printf("Looking for user.\n");
+    while(current != NULL){
 
-        if(strcmp(current->user, recipient) == 0)
+        if(strcmp(current->user, recipient) == 0){
+
+            printf("Found user.\n");
+            if(current->online == true){
+                port = current->port;
+                printf("User at port: %d\n", port);
+            }
+
             break;
+
+        }
 
         current = current->next;
 
     }
 
-    if(current->online == true)
-        port = current->port;
-
     return port;
+
+}
+
+bool checkStatus(cred *head, char *combined){
+
+    char username[PARAM_SIZE] = {0};
+    char temp[3 * PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    bool loggedIn = false;
+    cred *current = NULL;
+
+    current = head;
+    strcpy(temp, combined);
+
+    token = strtok(temp, delim);
+    strcpy(username, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0){
+
+            if(current->online == true){
+
+                loggedIn = true;
+                break;
+
+            }
+
+        }
+
+        current = current->next;
+
+    }
+
+    return loggedIn;
 
 }
 
