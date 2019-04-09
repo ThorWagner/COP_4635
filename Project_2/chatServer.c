@@ -13,6 +13,7 @@ typedef struct cred{
     char pass[PARAM_SIZE];
     struct cred *next;
     bool online;
+    bool banned;
     int port;
 }cred;
 
@@ -26,7 +27,7 @@ void clearCredentials(cred *node);
 void buildDatabase(cred *head, char *filename);
 void destroyDatabase(cred *head);
 void sigintHandler(int sig);
-bool searchDatabase(cred *head, char *combined);
+//bool searchDatabase(cred *head, char *combined);
 void addCredentials(cred *head, char *combined);
 void updateCredentials(cred *head, char *combined);
 void storeDatabase(cred *head, char *filename);
@@ -34,7 +35,9 @@ void setOnline(cred *head, char *combined, int i);
 int numOnline(cred *head);
 void setOffline(cred *head, int i);
 int getUserPort(cred *head, char *recipient);
-bool checkStatus(cred *head, char *combined);
+//bool checkStatus(cred *head, char *combined);
+void checkUserStatus(cred *head, char *combined, bool *found, bool *online,
+    bool *banned);
 
 // Global Variables
 cred *g_head = NULL;
@@ -186,7 +189,9 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     char *token = NULL;
     char *delim = ":";
     bool found = false;
-    bool loggedIn = false;
+    //bool loggedIn = false;
+    bool online = false;
+    bool banned = false;
 
     bytesIn = recv(i, inBuff, BUFFER_SIZE, 0);
     if(bytesIn <= 0){
@@ -219,18 +224,26 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 2:
-                found = searchDatabase(g_head, inBuff);
+                //found = searchDatabase(g_head, inBuff);
+                checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(found == true){
 
-                    loggedIn = checkStatus(g_head, inBuff);
-                    if(loggedIn == false){
+                    if(banned == false){
 
-                        setOnline(g_head, inBuff, i);
-                        send(i, "1", 1, 0);
+                        //loggedIn = checkStatus(g_head, inBuff);
+                        //if(loggedIn == false){
+                        if(online == false){
+
+                            setOnline(g_head, inBuff, i);
+                            send(i, "1", 1, 0);
+
+                        }
+                        else
+                            send(i, "2", 1, 0);
 
                     }
                     else
-                        send(i, "2", 1, 0);
+                        send(i, "3", 1, 0);
 
                 }
                 else
@@ -266,8 +279,8 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 26:
-                found = searchDatabase(g_head, inBuff);
-
+                //found = searchDatabase(g_head, inBuff);
+                checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(found == true){
 
                     send(i, "1", 1, 0);
@@ -332,6 +345,7 @@ void clearCredentials(cred *node){
     memset(node->pass, 0, PARAM_SIZE);
     node->next = NULL;
     node->online = false;
+    node->banned = false;
     node->port = 0;
 
     return;
@@ -433,7 +447,7 @@ void sigintHandler(int sig){
 
 }
 
-bool searchDatabase(cred *head, char *combined){
+/*bool searchDatabase(cred *head, char *combined){
 
     char username[PARAM_SIZE] = {0};
     char password[PARAM_SIZE] = {0};
@@ -470,7 +484,7 @@ bool searchDatabase(cred *head, char *combined){
 
     return found;
 
-}
+}*/
 
 void addCredentials(cred *head, char *combined){
 
@@ -639,16 +653,12 @@ int getUserPort(cred *head, char *recipient){
     cred *current = NULL;
 
     current = head;
-    printf("Looking for user.\n");
     while(current != NULL){
 
         if(strcmp(current->user, recipient) == 0){
 
-            printf("Found user.\n");
-            if(current->online == true){
+            if(current->online == true)
                 port = current->port;
-                printf("User at port: %d\n", port);
-            }
 
             break;
 
@@ -662,7 +672,7 @@ int getUserPort(cred *head, char *recipient){
 
 }
 
-bool checkStatus(cred *head, char *combined){
+/*bool checkStatus(cred *head, char *combined){
 
     char username[PARAM_SIZE] = {0};
     char temp[3 * PARAM_SIZE] = {0};
@@ -695,6 +705,55 @@ bool checkStatus(cred *head, char *combined){
     }
 
     return loggedIn;
+
+}*/
+
+void checkUserStatus(cred *head, char *combined, bool *found, bool *online,
+    bool *banned){
+
+    char username[PARAM_SIZE] = {0};
+    char password[PARAM_SIZE] = {0};
+    char temp[3 * PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    cred *current = NULL;
+
+    current = head;
+    strcpy(temp, combined);
+
+    token = strtok(temp, delim);
+    strcpy(username, token);
+    token = strtok(NULL, delim);
+    strcpy(password, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0){
+
+            if(strcmp(current->pass, password) == 0){
+
+                *found = true;
+                *online = current->online;
+                *banned = current->banned;
+
+                break;
+
+            }
+            else{
+
+                *found = false;
+                *online = false;
+                *banned = false;
+
+            }
+
+        }
+
+        current = current->next;
+
+    }
+
+    return;
 
 }
 
