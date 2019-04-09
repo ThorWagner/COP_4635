@@ -297,7 +297,7 @@ int main(void){
 
                                         case 0:
                                             printf("\n\n-=| RETURNING TO MAIN "
-                                                "MENU |=-\n\n\n");
+                                                "MENU |=-\n");
                                             break;
 
                                     }
@@ -314,7 +314,8 @@ int main(void){
                                     printf("\n\n-=| FILE TRANSFER |=-\n\n"
                                         "1: Select file\n"
                                         "2: Select object\n"
-                                        "0: Back\n\n");
+                                        "0: Back\n\n"
+                                        "Enter an option: ");
                                     scanf("\n\n%d", &opt3);
 
                                     switch(opt3){
@@ -327,12 +328,12 @@ int main(void){
 
                                         case 0:
                                             printf("\n\n-=| RETURNING TO MAIN "
-                                                "MENU |=-\n\n\n");
+                                                "MENU |=-\n");
                                             break;
 
                                         default:
                                             printf("\nEnter a valid option."
-                                                "\n\n\n");
+                                                "\n");
                                             break;
 
                                     }
@@ -401,6 +402,78 @@ int main(void){
 
                             case 8:
                                 printf("\n\n-=| ADMINISTRATOR |=-\n\n");
+
+                                // Get Admin password
+                                memset(pass, 0, PARAM_SIZE);
+                                printf("Enter Administrator password: ");
+                                scanf("\n\n%s", pass);
+
+                                // Check password
+                                if(strcmp(pass, "admin") == 0){
+
+                                    opt3 = 99;
+                                    printf("\n1: Ban a member\n"
+                                        "2: Dismiss a member\n"
+                                        "3: Kick a member from the chat room\n"
+                                        "0: Back\n\n"
+                                        "Enter an option: ");
+                                    scanf("\n\n%d", &opt3);
+
+                                    switch(opt3){
+
+                                        case 1:
+                                            memset(user, 0, PARAM_SIZE);
+                                            printf("Enter the username of the "
+                                                "member you want to ban: ");
+                                            scanf("\n\n%s", user);
+
+                                            // Send username to ban
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            sprintf(msg1, "28-%s", user);
+                                            send(socketFD, msg1, strlen(msg1), 0);
+
+                                            // Get Server response
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                            // Echo Server response
+                                            if(strcmp(msg1, "1") == 0)
+                                                printf("\n%s has been banned.\n",
+                                                    user);
+                                            else
+                                                printf("\n%s is an invalid "
+                                                    "username.\n", user);
+
+                                            printf("\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n");
+
+                                            break;
+
+                                        case 2:
+                                            printf("\nFIXME\n");
+                                            break;
+
+                                        case 3:
+                                            printf("\nFIXME\n");
+                                            break;
+
+                                        case 0:
+                                            printf("\n\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n\n\n");
+                                            break;
+
+                                        default:
+                                            printf("\nInvalid selection."
+                                                "\n\n\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n\n\n");
+                                            break;
+
+                                    }
+
+                                }
+                                else
+                                    printf("\nIncorrect password.\n\n\n");
+
                                 break;
 
                             case 0:
@@ -419,6 +492,8 @@ int main(void){
                 }
                 else if(strcmp(msg1, "2") == 0)
                     printf("\nThat user is already logged in!\n\n\n");
+                else if(strcmp(msg1, "3") == 0)
+                    printf("\nYour account has been banned.\n\n\n");
                 else
                     printf("\nInvalid username or password.\n\n\n");
 
