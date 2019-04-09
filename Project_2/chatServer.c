@@ -27,7 +27,7 @@ void clearCredentials(cred *node);
 void buildDatabase(cred *head, char *filename);
 void destroyDatabase(cred *head);
 void sigintHandler(int sig);
-//bool searchDatabase(cred *head, char *combined);
+bool checkCredentials(cred *head, char *combined);
 void addCredentials(cred *head, char *combined);
 void updateCredentials(cred *head, char *combined);
 void storeDatabase(cred *head, char *filename);
@@ -36,8 +36,9 @@ int numOnline(cred *head);
 void setOffline(cred *head, int i);
 int getUserPort(cred *head, char *recipient);
 //bool checkStatus(cred *head, char *combined);
-void checkUserStatus(cred *head, char *combined, bool *found, bool *online,
+void checkUserStatus(cred *head, char *user, bool *found, bool *online,
     bool *banned);
+void banUser(cred *head, char *user);
 
 // Global Variables
 cred *g_head = NULL;
@@ -188,6 +189,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     char privateMsg[BUFFER_SIZE] = {0};
     char *token = NULL;
     char *delim = ":";
+    bool valid = false;
     bool found = false;
     //bool loggedIn = false;
     bool online = false;
@@ -224,10 +226,11 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 2:
-                //found = searchDatabase(g_head, inBuff);
-                checkUserStatus(g_head, inBuff, &found, &online, &banned);
-                if(found == true){
+                valid = checkCredentials(g_head, inBuff);
+                //checkUserStatus(g_head, inBuff, &found, &online, &banned);
+                if(valid == true){
 
+                    checkUserStatus(g_head, inBuff, &found, &online, &banned);
                     if(banned == false){
 
                         //loggedIn = checkStatus(g_head, inBuff);
@@ -279,9 +282,9 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 26:
-                //found = searchDatabase(g_head, inBuff);
-                checkUserStatus(g_head, inBuff, &found, &online, &banned);
-                if(found == true){
+                valid = checkCredentials(g_head, inBuff);
+                //checkUserStatus(g_head, inBuff, &found, &online, &banned);
+                if(valid == true){
 
                     send(i, "1", 1, 0);
 
@@ -291,6 +294,19 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                     updateCredentials(g_head, inBuff);
 
                     storeDatabase(g_head, FILENAME);
+
+                }
+                else
+                    send(i, "0", 1, 0);
+
+                break;
+
+            case 28:
+                checkUserStatus(g_head, inBuff, &found, &online, &banned);
+                if(found == true){
+
+                    banUser(g_head, inBuff);
+                    send(i, "1", 1, 0);
 
                 }
                 else
@@ -447,7 +463,7 @@ void sigintHandler(int sig){
 
 }
 
-/*bool searchDatabase(cred *head, char *combined){
+bool checkCredentials(cred *head, char *combined){
 
     char username[PARAM_SIZE] = {0};
     char password[PARAM_SIZE] = {0};
@@ -484,7 +500,7 @@ void sigintHandler(int sig){
 
     return found;
 
-}*/
+}
 
 void addCredentials(cred *head, char *combined){
 
@@ -708,44 +724,63 @@ int getUserPort(cred *head, char *recipient){
 
 }*/
 
-void checkUserStatus(cred *head, char *combined, bool *found, bool *online,
+void checkUserStatus(cred *head, char *user, bool *found, bool *online,
     bool *banned){
 
     char username[PARAM_SIZE] = {0};
-    char password[PARAM_SIZE] = {0};
     char temp[3 * PARAM_SIZE] = {0};
     char *token = NULL;
     char *delim = ":";
     cred *current = NULL;
 
     current = head;
-    strcpy(temp, combined);
+    strcpy(temp, user);
 
     token = strtok(temp, delim);
     strcpy(username, token);
-    token = strtok(NULL, delim);
-    strcpy(password, token);
+
+    *found = false;
+    *online = false;
+    *banned = false;
 
     while(current != NULL){
 
         if(strcmp(current->user, username) == 0){
 
-            if(strcmp(current->pass, password) == 0){
+            *found = true;
+            *online = current->online;
+            *banned = current->banned;
 
-                *found = true;
-                *online = current->online;
-                *banned = current->banned;
+        }
 
-                break;
+        current = current->next;
 
-            }
-            else{
+    }
 
-                *found = false;
-                *online = false;
-                *banned = false;
+    return;
 
-            }
+}
+
+void banUser(cred *head, char *user){
+
+    char username[PARAM_SIZE] = {0};
+    char temp[3 * PARAM_SIZE] = {0};
+    char *token = NULL;
+    char *delim = ":";
+    cred *current = NULL;
+
+    current = head;
+    strcpy(temp, user);
+
+    token = strtok(temp, delim);
+    strcpy(username, token);
+
+    while(current != NULL){
+
+        if(strcmp(current->user, username) == 0){
+
+            current->banned = true;
+            break;
 
         }
 
