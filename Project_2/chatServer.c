@@ -1,6 +1,16 @@
-/*
- * Michael Wagner
- * COP 4635 - Project 2
+/** @file chatServer.c
+ *  @brief Program file for group chat server.
+ *
+ *  This file contains all functions and processes to initiate a group chat
+ *  server. Contains various functionalities such as maintaining user database,
+ *  authenticating logins, propagating group chat messages, delivering private
+ *  chat messages, administrative (banning, dismissing, and kicking), etc.
+ *
+ *  @author Michael Wagner
+ *  @date 04/09/2019
+ *  @info Course COP 4635 - Project 2
+ *  @bug When files are received by clients the stored file is blank, error may
+ *  be here.
  */
 
 #include <signal.h>
@@ -35,7 +45,6 @@ void setOnline(cred *head, char *combined, int i);
 int numOnline(cred *head);
 void setOffline(cred *head, int i);
 int getUserPort(cred *head, char *recipient);
-//bool checkStatus(cred *head, char *combined);
 void checkUserStatus(cred *head, char *user, bool *found, bool *online,
     bool *banned);
 void banUser(cred *head, char *user);
@@ -54,7 +63,6 @@ int main(void){
     struct sockaddr_in clientAddr;
     fd_set master;
     fd_set temp;
-    //cred *head = NULL;
 
     // Read in user database
     g_head = malloc(sizeof(cred));
@@ -192,7 +200,6 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     char *delim = ":";
     bool valid = false;
     bool found = false;
-    //bool loggedIn = false;
     bool online = false;
     bool banned = false;
 
@@ -216,7 +223,6 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     }
     else{
 
-        //sscanf(inBuff, "%d-%[^\n]", &msgCode, inBuff);
         sscanf(inBuff, "%d-%[^\n]", &msgCode, temp);
         switch(msgCode){
 
@@ -228,14 +234,11 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
 
             case 2:
                 valid = checkCredentials(g_head, temp);
-                //checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(valid == true){
 
                     checkUserStatus(g_head, temp, &found, &online, &banned);
                     if(banned == false){
 
-                        //loggedIn = checkStatus(g_head, inBuff);
-                        //if(loggedIn == false){
                         if(online == false){
 
                             setOnline(g_head, temp, i);
@@ -270,7 +273,6 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
             case 23:
                 token = strtok(temp, delim);
                 strcpy(recipient, token);
-                //token = strtok(NULL, delim);
                 strcpy(privateMsg, "23-");
                 strcat(privateMsg, temp + strlen(recipient) + 1);
 
@@ -283,9 +285,35 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
 
                 break;
 
+            case 251:
+                checkUserStatus(g_head, temp, &found, &online, &banned);
+                if(found == true){
+
+                    if(online == true){
+
+                        send(i, "1", 1, 0);
+
+                        memset(inBuff, 0, BUFFER_SIZE);
+                        recv(i, inBuff, BUFFER_SIZE, 0);
+
+                        memset(outBuff, 0, BUFFER_SIZE);
+                        strcpy(outBuff, "251-");
+                        strcat(outBuff, inBuff);
+
+                        privatePort = getUserPort(g_head, temp);
+                        if(privatePort > 0)
+                            send(privatePort, outBuff, strlen(outBuff), 0);
+
+                    }
+
+                }
+                else
+                    send(i, "0", 1, 0);
+
+                break;
+
             case 26:
                 valid = checkCredentials(g_head, temp);
-                //checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(valid == true){
 
                     send(i, "1", 1, 0);
@@ -319,8 +347,46 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                         privatePort = getUserPort(g_head, temp);
                         if(privatePort > 0)
                             send(privatePort, "281-Banned", 10, 0);
-                        else
-                            send(i, "User unavailable.", 17, 0);
+
+                    }
+
+                }
+                else
+                    send(i, "0", 1, 0);
+
+                break;
+
+            case 282:
+                checkUserStatus(g_head, temp, &found, &online, &banned);
+                if(found == true){
+
+                    send(i, "1", 1, 0);
+
+                    if(online == true){
+
+                        privatePort = getUserPort(g_head, temp);
+                        if(privatePort > 0)
+                            send(privatePort, "282-Dismissed", 13, 0);
+
+                    }
+
+                }
+                else
+                    send(i, "0", 1, 0);
+
+                break;
+
+            case 283:
+                checkUserStatus(g_head, temp, &found, &online, &banned);
+                if(found == true){
+
+                    send(i, "1", 1, 0);
+
+                    if(online == true){
+
+                        privatePort = getUserPort(g_head, temp);
+                        if(privatePort > 0)
+                            send(privatePort, "283-Kicked", 10, 0);
 
                     }
 
@@ -666,7 +732,7 @@ void setOffline(cred *head, int i){
         if(current->port == i){
 
             current->online = false;
-            //current->port = 0;
+
             break;
 
         }
@@ -703,42 +769,6 @@ int getUserPort(cred *head, char *recipient){
     return port;
 
 }
-
-/*bool checkStatus(cred *head, char *combined){
-
-    char username[PARAM_SIZE] = {0};
-    char temp[3 * PARAM_SIZE] = {0};
-    char *token = NULL;
-    char *delim = ":";
-    bool loggedIn = false;
-    cred *current = NULL;
-
-    current = head;
-    strcpy(temp, combined);
-
-    token = strtok(temp, delim);
-    strcpy(username, token);
-
-    while(current != NULL){
-
-        if(strcmp(current->user, username) == 0){
-
-            if(current->online == true){
-
-                loggedIn = true;
-                break;
-
-            }
-
-        }
-
-        current = current->next;
-
-    }
-
-    return loggedIn;
-
-}*/
 
 void checkUserStatus(cred *head, char *user, bool *found, bool *online,
     bool *banned){

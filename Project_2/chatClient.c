@@ -1,6 +1,15 @@
-/*
- * Michael Wagner
- * COP 4635 - Project 2
+/** @file chatClient.c
+ *  @brief Program file for group chat client.
+ *
+ *  This file contains all functions and processes to initiate a group chat
+ *  client. Contains various functionalities such as user registration, user
+ *  login, group chat, private chat, chat log viewing, administrative (banning,
+ *  dismissing, and kicking), etc.
+ *
+ *  @author Michael Wagner
+ *  @date 04/09/2019
+ *  @info Course COP 4635 - Project 2
+ *  @bug When receiving files from other users the stored file is blank.
  */
 
 #include "chatShared.h"
@@ -18,15 +27,19 @@ int main(void){
     int opt1 = 0;
     int opt2 = 0;
     int opt3 = 0;
+    int filesize = 0;
     char user[PARAM_SIZE] = {0};
     char pass[PARAM_SIZE] = {0};
     char confirm[PARAM_SIZE] = {0};
     char currentID[PARAM_SIZE] = {0};
     char old[PARAM_SIZE] = {0};
     char new[PARAM_SIZE] = {0};
+    char filename[PARAM_SIZE] = {0};
+    char path[PARAM_SIZE] = {0};
     char msg1[BUFFER_SIZE] = {0};
     char msg2[BUFFER_SIZE] = {0};
     char logMsg[BUFFER_SIZE] = "(private)Me: ";
+    char data[BUFFER_SIZE] = {0};
     char logfile[2 * PARAM_SIZE] = {0};
     bool exitFlag = false;
     FILE *infile = NULL;
@@ -173,6 +186,7 @@ int main(void){
                                     "Type 'ESC' at any time to return to the "
                                     "main menu.\n\n");
 
+                                exitFlag = false;
                                 while(exitFlag == false){
 
                                     listFD = master;
@@ -321,9 +335,64 @@ int main(void){
                                     switch(opt3){
 
                                         case 1:
+                                            memset(user, 0, PARAM_SIZE);
+                                            printf("\nEnter the receipient "
+                                                "username: ");
+                                            scanf("\n\n%s", user);
+
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            sprintf(msg1, "251-%s", user);
+                                            send(socketFD, msg1, strlen(msg1), 0);
+
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                            // Echo Server response
+                                            if(strcmp(msg1, "1") == 0){
+
+                                                memset(filename, 0, PARAM_SIZE);
+                                                printf("\nEnter the filename: ");
+                                                scanf("\n\n%s", filename);
+
+                                                memset(path, 0, 2 * PARAM_SIZE);
+                                                printf("Enter the path: ");
+                                                scanf("\n\n%s", path);
+
+                                                strcat(path, "/");
+                                                strcat(path, filename);
+
+                                                infile = fopen(path, "rb");
+                                                if(infile != NULL){
+
+                                                    // Calculate file size
+                                                    fseek(infile, 0, SEEK_END);
+                                                    filesize = ftell(infile);
+                                                    fseek(infile, 0, SEEK_SET);
+
+                                                    // Read file data
+                                                    fread(data, 1, filesize + 1, infile);
+
+                                                    // Send message
+                                                    memset(msg1, 0, BUFFER_SIZE);
+                                                    send(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                                    fclose(infile);
+
+                                                }
+                                                else
+                                                    printf("\n%s is not a valid "
+                                                        "path and filename.\n",
+                                                        path);
+
+                                            }
+                                            else
+                                                printf("\n%s is an invalid "
+                                                    "username.\n", user); 
+                                            
                                             break;
 
                                         case 2:
+                                            printf("\nFIXME\n");
                                             break;
 
                                         case 0:
@@ -453,11 +522,59 @@ int main(void){
                                             break;
 
                                         case 2:
-                                            printf("\nFIXME\n");
+                                            memset(user, 0, PARAM_SIZE);
+                                            printf("Enter the username of the "
+                                                "member you want to dismiss: ");
+                                            scanf("\n\n%s", user);
+
+                                            // Send username to ban
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            sprintf(msg1, "282-%s", user);
+                                            send(socketFD, msg1, strlen(msg1), 0);
+
+                                            // Get Server response
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                            // Echo Server response
+                                            if(strcmp(msg1, "1") == 0)
+                                                printf("\n%s has been dismissed.\n",
+                                                    user);
+                                            else
+                                                printf("\n%s is an invalid "
+                                                    "username.\n", user);
+
+                                            printf("\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n");
+
                                             break;
 
                                         case 3:
-                                            printf("\nFIXME\n");
+                                            memset(user, 0, PARAM_SIZE);
+                                            printf("Enter the username of the "
+                                                "member you want to kick: ");
+                                            scanf("\n\n%s", user);
+
+                                            // Send username to ban
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            sprintf(msg1, "283-%s", user);
+                                            send(socketFD, msg1, strlen(msg1), 0);
+
+                                            // Get Server response
+                                            memset(msg1, 0, BUFFER_SIZE);
+                                            recv(socketFD, msg1, BUFFER_SIZE, 0);
+
+                                            // Echo Server response
+                                            if(strcmp(msg1, "1") == 0)
+                                                printf("\n%s has been kicked.\n",
+                                                    user);
+                                            else
+                                                printf("\n%s is an invalid "
+                                                    "username.\n", user);
+
+                                            printf("\n-=| RETURNING TO MAIN "
+                                                "MENU |=-\n");
+
                                             break;
 
                                         case 0:
@@ -553,11 +670,14 @@ void initClient(int *socketFD, struct sockaddr_in *serverAddr){
 bool sendRecv(int i, int socketFD, char *currentID){
 
     int msgCode = 0;
+    char filename[PARAM_SIZE] = {0};
+    char path[PARAM_SIZE] = {0};
     char temp[BUFFER_SIZE] = {0};
     char inBuff[BUFFER_SIZE] = {0};
     char outBuff[BUFFER_SIZE] = {0};
     char msg[BUFFER_SIZE] = {0};
     bool exitFlag = false;
+    FILE *outfile = NULL;
 
     if(i == 0){
 
@@ -582,33 +702,55 @@ bool sendRecv(int i, int socketFD, char *currentID){
         switch(msgCode){
 
             case 22:
-                printf("%s\n", msg);
-                fflush(stdout);
-
-                break;
-
             case 23:
                 printf("%s\n", msg);
                 fflush(stdout);
 
                 break;
 
+            case 251:
+                memset(filename, 0, PARAM_SIZE);
+                printf("You have received a file.\n"
+                    "Enter the filename: ");
+                scanf("\n\n%s", filename);
+
+                memset(path, 0, PARAM_SIZE);
+                printf("Enter the path: ");
+                scanf("\n\n%s", path);
+
+                strcat(path, "/");
+                strcat(path, filename);
+
+                outfile = fopen(path, "w");
+                if(outfile != NULL){
+
+                    printf("\n%s\n", msg);
+                    fprintf(outfile, "%s", msg);
+                    printf("\n%s has been saved.\n", filename);
+                    fclose(outfile);
+
+                }
+                else
+                    printf("\nFile could not be saved.\n");
+
+                break;
+
             case 281:
-                printf("You have been banned by the Administrator.");
+                printf("You have been banned by the Administrator.\n\n\n");
                 fflush(stdout);
                 exit(EXIT_SUCCESS);
 
                 break;
 
             case 282:
-                printf("You have been dismissed from the Group Chat.");
+                printf("You have been dismissed from the Group Chat.\n");
                 fflush(stdout);
                 exitFlag = true;
 
                 break;
 
             case 283:
-                printf("You have been kicked from the Group Chat.");
+                printf("You have been kicked from the Group Chat.\n\n\n");
                 fflush(stdout);
                 exit(EXIT_SUCCESS);
 
