@@ -398,6 +398,9 @@ int main(void){
                             case 7:
                                 printf("\n\n-=| LOGGING OUT |=-\n\n\n");
                                 memset(currentID, 0, PARAM_SIZE);
+                                memset(msg1, 0, BUFFER_SIZE);
+                                sprintf(msg1, "27-Logout");
+                                send(socketFD, msg1, strlen(msg1), 0);
                                 break;
 
                             case 8:
@@ -429,7 +432,7 @@ int main(void){
 
                                             // Send username to ban
                                             memset(msg1, 0, BUFFER_SIZE);
-                                            sprintf(msg1, "28-%s", user);
+                                            sprintf(msg1, "281-%s", user);
                                             send(socketFD, msg1, strlen(msg1), 0);
 
                                             // Get Server response
@@ -549,9 +552,11 @@ void initClient(int *socketFD, struct sockaddr_in *serverAddr){
 
 bool sendRecv(int i, int socketFD, char *currentID){
 
+    int msgCode = 0;
     char temp[BUFFER_SIZE] = {0};
     char inBuff[BUFFER_SIZE] = {0};
     char outBuff[BUFFER_SIZE] = {0};
+    char msg[BUFFER_SIZE] = {0};
     bool exitFlag = false;
 
     if(i == 0){
@@ -573,10 +578,45 @@ bool sendRecv(int i, int socketFD, char *currentID){
     else{
 
         recv(socketFD, inBuff, BUFFER_SIZE, 0);
-        printf("%s\n", inBuff);
-        fflush(stdout);
+        sscanf(inBuff, "%d-%[^\n]", &msgCode, msg);
+        switch(msgCode){
 
-        updateLog(currentID, inBuff);
+            case 22:
+                printf("%s\n", msg);
+                fflush(stdout);
+
+                break;
+
+            case 23:
+                printf("%s\n", msg);
+                fflush(stdout);
+
+                break;
+
+            case 281:
+                printf("You have been banned by the Administrator.");
+                fflush(stdout);
+                exit(EXIT_SUCCESS);
+
+                break;
+
+            case 282:
+                printf("You have been dismissed from the Group Chat.");
+                fflush(stdout);
+                exitFlag = true;
+
+                break;
+
+            case 283:
+                printf("You have been kicked from the Group Chat.");
+                fflush(stdout);
+                exit(EXIT_SUCCESS);
+
+                break;
+
+        }
+
+        updateLog(currentID, msg);
 
     }
 

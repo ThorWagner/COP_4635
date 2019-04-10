@@ -185,6 +185,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     int privatePort = 0;
     char inBuff[BUFFER_SIZE] = {0};
     char outBuff[BUFFER_SIZE] = {0};
+    char temp[BUFFER_SIZE] = {0};
     char recipient[PARAM_SIZE] = {0};
     char privateMsg[BUFFER_SIZE] = {0};
     char *token = NULL;
@@ -215,29 +216,29 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
     }
     else{
 
-        sscanf(inBuff, "%d-%[^\n]", &msgCode, inBuff);
-
+        //sscanf(inBuff, "%d-%[^\n]", &msgCode, inBuff);
+        sscanf(inBuff, "%d-%[^\n]", &msgCode, temp);
         switch(msgCode){
 
             case 1:
-                addCredentials(g_head, inBuff);
+                addCredentials(g_head, temp);
                 storeDatabase(g_head, FILENAME);
 
                 break;
 
             case 2:
-                valid = checkCredentials(g_head, inBuff);
+                valid = checkCredentials(g_head, temp);
                 //checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(valid == true){
 
-                    checkUserStatus(g_head, inBuff, &found, &online, &banned);
+                    checkUserStatus(g_head, temp, &found, &online, &banned);
                     if(banned == false){
 
                         //loggedIn = checkStatus(g_head, inBuff);
                         //if(loggedIn == false){
                         if(online == false){
 
-                            setOnline(g_head, inBuff, i);
+                            setOnline(g_head, temp, i);
                             send(i, "1", 1, 0);
 
                         }
@@ -267,10 +268,11 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 23:
-                token = strtok(inBuff, delim);
+                token = strtok(temp, delim);
                 strcpy(recipient, token);
                 //token = strtok(NULL, delim);
-                strcpy(privateMsg, inBuff + strlen(recipient) + 1);
+                strcpy(privateMsg, "23-");
+                strcat(privateMsg, temp + strlen(recipient) + 1);
 
                 privatePort = getUserPort(g_head, recipient);
                 if(privatePort > 0)
@@ -282,7 +284,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                 break;
 
             case 26:
-                valid = checkCredentials(g_head, inBuff);
+                valid = checkCredentials(g_head, temp);
                 //checkUserStatus(g_head, inBuff, &found, &online, &banned);
                 if(valid == true){
 
@@ -291,7 +293,7 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
                     memset(inBuff, 0, BUFFER_SIZE);
                     recv(i, inBuff, BUFFER_SIZE, 0);
 
-                    updateCredentials(g_head, inBuff);
+                    updateCredentials(g_head, temp);
 
                     storeDatabase(g_head, FILENAME);
 
@@ -301,12 +303,26 @@ void sendRecv(int i, int serverFD, int maxFD, fd_set *master, int *numClients){
 
                 break;
 
-            case 28:
-                checkUserStatus(g_head, inBuff, &found, &online, &banned);
+            case 27:
+                setOffline(g_head, i);
+                break;
+
+            case 281:
+                checkUserStatus(g_head, temp, &found, &online, &banned);
                 if(found == true){
 
-                    banUser(g_head, inBuff);
+                    banUser(g_head, temp);
                     send(i, "1", 1, 0);
+
+                    if(online == true){
+
+                        privatePort = getUserPort(g_head, temp);
+                        if(privatePort > 0)
+                            send(privatePort, "281-Banned", 10, 0);
+                        else
+                            send(i, "User unavailable.", 17, 0);
+
+                    }
 
                 }
                 else
@@ -650,7 +666,7 @@ void setOffline(cred *head, int i){
         if(current->port == i){
 
             current->online = false;
-            current->port = 0;
+            //current->port = 0;
             break;
 
         }
