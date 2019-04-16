@@ -16,7 +16,7 @@ files:
 * [**images/**](README.md)
   * image1.gif
 
-### Project_2
+### Project_2 :100:
 * Makefile
 * chatClient.c
 * chatServer.c
