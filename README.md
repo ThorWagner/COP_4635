@@ -24,3 +24,8 @@ files:
 * chatShared.h
 * database.dat
 
+### Project_3
+* Makefile
+* ftpClient.c
+* ftpServer.c
+
