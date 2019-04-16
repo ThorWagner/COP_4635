@@ -10,6 +10,7 @@
 #define WAIT_SIZE 10
 #define PARAM_SIZE 1024
 #define BUFFER_SIZE 4096
+#define NEW 1
 
 void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum);
 void threadedHandler(void *serverFD);
