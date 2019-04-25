@@ -25,7 +25,11 @@ files:
 * database.dat
 
 ### Project_3
+* [**client/**](README.md)
+  * ftpClient.c
+  * ftpClient.h
 * Makefile
-* ftpClient.c
-* ftpServer.c
+* [**server/**](README.md)
+  * ftpServer.c
+  * ftpServer.h
 
