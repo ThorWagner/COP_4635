@@ -1,25 +1,17 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <pthread.h>
-
-#define DEF_PORT 8080
-#define WAIT_SIZE 10
-#define PARAM_SIZE 1024
-#define BUFFER_SIZE 4096
-#define NEW 1
+#include "ftpServer.h"
 
 void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum);
-void threadedHandler(void *serverFD);
+void *threadedHandler(void *serverFD);
+void parseFilename(char *msg, char *filename);
+bool transmitFile(int serverFD, char *filename);
+void sigintHandler(int sig);
 
 int main(int argC, char **argV){
 
     int serverFD = 0;
     int clientFD = 0;
     int addrLen = 0;
+    int status = 0;
     int *newSocket = NULL;
     struct sockaddr_in serverAddr;
     struct sockaddr_in clientAddr;
@@ -28,6 +20,9 @@ int main(int argC, char **argV){
     newSocket = malloc(sizeof(int));
 
     initServer(&serverFD, &serverAddr, DEF_PORT);
+
+    // Handle keyboard interrupt [^C]
+    signal(SIGINT, sigintHandler);
 
     status = listen(serverFD, WAIT_SIZE);
     if(status < 0){
@@ -38,11 +33,11 @@ int main(int argC, char **argV){
 
     }
 
-    while(clientFD = accept(serverFD, (struct sockaddr *)&clientAddr,
-        (socklen_t *)&addrLen)){
+    while((clientFD = accept(serverFD, (struct sockaddr *)&clientAddr,
+    (socklen_t *)&addrLen))){
 
         pthread_t newConnect;
-        *newSocket = ClientFD;
+        *newSocket = clientFD;
         pthread_create(&newConnect, NULL, threadedHandler, (void *)newSocket);
         pthread_join(newConnect, NULL);
 
@@ -74,7 +69,7 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr, int portNum){
     serverAddr->sin_port = htons(portNum);
 
     // Bind the Server socket
-    status = bind(*serverFD, (struct sockaddr *)servAddr, addrLen);
+    status = bind(*serverFD, (struct sockaddr *)serverAddr, addrLen);
     if(status < 0){
 
         fprintf(stderr, "\nFailed to bind socket.\n\n\n");
@@ -87,7 +82,7 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr, int portNum){
 
 }
 
-void threadedHandler(void *serverFD){
+void *threadedHandler(void *serverFD){
 
     int socket = 0;
     int valRead = 0;
@@ -99,10 +94,69 @@ void threadedHandler(void *serverFD){
     valRead = recv(socket, msg, BUFFER_SIZE, 0);
     if(valRead > 0){
 
-        strcpy(filename, parseFilename(msg));
+        parseFilename(msg, filename);
+        memset(msg, 0, BUFFER_SIZE);
+
+        // Check if file exists
+        if(access(filename, F_OK) != -1){
+
+            strcpy(msg, "OK");
+            send(socket, msg, strlen(msg), 0);
+            transmitFile(socket, filename);
+
+        }
+        else{
+
+            strcpy(msg, "NO");
+            send(socket, msg, strlen(msg), 0);
+
+        }
 
     }
 
+    close(socket);
+
+    return NULL;
+
+}
+
+void parseFilename(char *msg, char *filename){
+
+    char *temp = NULL;
+
+    temp = strchr(msg, ' ');
+    strcpy(filename, temp + 1);
+
+    return;
+
+}
+
+bool transmitFile(int serverFD, char *filename){
+
+    int newFD = 0;
+    int size = 0;
+    bool sent = false;
+    struct stat file;
+
+    stat(filename, &file);
+    newFD = open(filename, O_RDONLY);
+    size = file.st_size;
+    send(serverFD, &size, sizeof(int), 0);
+    if(sendfile(serverFD, newFD, NULL, size) != -1)
+        sent = true;
+
+    return sent;
+
+}
+
+void sigintHandler(int sig){
+
+    // Verify server process is ending
+    fprintf(stderr, "\nShutting down server...\n\n\n");
+
+    // Return SIGINT
+    exit(sig);
+    
     return;
 
 }
