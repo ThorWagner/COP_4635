@@ -31,5 +31,6 @@ files:
 * [**server/**](README.md)
   * ftpServer.c
   * ftpServer.h
+  * test.txt
 * Makefile
 
