@@ -28,8 +28,8 @@ files:
 * [**client/**](README.md)
   * ftpClient.c
   * ftpClient.h
-* Makefile
 * [**server/**](README.md)
   * ftpServer.c
   * ftpServer.h
+* Makefile
 
