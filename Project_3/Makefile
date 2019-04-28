@@ -3,7 +3,7 @@ LFLAGS = -lpthread -lrt
 CC = gcc
 
 serverObjs = server/ftpServer.o server/ftpServerLib.o
-clientObjs = client/ftpClient.o
+clientObjs = client/ftpClient.o client/ftpClientLib.o
 
 all : ftpServer ftpClient
 
@@ -16,6 +16,7 @@ ftpClient : $(clientObjs)
 server/ftpServer.o : server/ftpServer.c include/ftpServerLib.h include/global.h
 server/ftpServerLib.o : server/ftpServerLib.c include/ftpServerLib.h include/global.h
 client/ftpClient.o : client/ftpClient.c client/ftpClientLib.h
+client/ftpClientLib.o : client/ftpClientLib.c client/ftpClientLib.h
 
 .PHONY : clean
 clean :
