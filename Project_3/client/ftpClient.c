@@ -187,6 +187,7 @@ int main(int argC, char **argV){
                 recv(newSock, msg2, 2, 0);
                 if(strcmp(msg2, "OK") == 0){
 
+                    printf("\nUploading \'%s\'\n\n", filename);
                     transmitFile(newSock, filename);
 
                 }
