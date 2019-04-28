@@ -28,8 +28,9 @@ files:
 * [**client/**](README.md)
   * b.txt
   * ftpClient.c
-  * ftpClientLib.h
+  * ftpClientLib.c
 * [**include/**](README.md)
+  * ftpClientLib.h
   * ftpServerLib.h
   * global.h
 * [**server/**](README.md)
