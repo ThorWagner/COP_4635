@@ -1,4 +1,4 @@
-#include "ftpClientLib.h"
+#include "../include/ftpClientLib.h"
 
 int setPort(int argC, char **argV){
 
