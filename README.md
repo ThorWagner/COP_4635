@@ -26,11 +26,15 @@ files:
 
 ### Project_3
 * [**client/**](README.md)
+  * b.txt
   * ftpClient.c
-  * ftpClient.h
+  * ftpClientLib.h
+* [**include/**](README.md)
+  * ftpServerLib.h
+  * global.h
 * [**server/**](README.md)
+  * a.txt
   * ftpServer.c
-  * ftpServer.h
-  * test.txt
+  * ftpServerLib.c
 * Makefile
 
