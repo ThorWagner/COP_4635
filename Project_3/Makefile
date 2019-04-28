@@ -2,17 +2,21 @@ CFLAGS = -g -Wall -Wextra
 LFLAGS = -lpthread -lrt
 CC = gcc
 
+serverObjs = server/ftpServer.o server/ftpServerLib.o
+clientObjs = client/ftpClient.o
+
 all : ftpServer ftpClient
 
-ftpServer : server/ftpServer.o
-	$(CC) $(CFLAGS) -o server/server server/ftpServer.o $(LFLAGS)
+ftpServer : $(serverObjs)
+	$(CC) $(CFLAGS) -o server/server $(serverObjs) $(LFLAGS)
 
-ftpClient : client/ftpClient.o
-	$(CC) $(CFLAGS) -o client/client client/ftpClient.o
+ftpClient : $(clientObjs)
+	$(CC) $(CFLAGS) -o client/client $(clientObjs)
 
-server/ftpServer.o : server/ftpServer.c server/ftpServer.h
-client/ftpClient.o : client/ftpClient.c client/ftpClient.h
+server/ftpServer.o : server/ftpServer.c include/ftpServerLib.h include/global.h
+server/ftpServerLib.o : server/ftpServerLib.c include/ftpServerLib.h include/global.h
+client/ftpClient.o : client/ftpClient.c client/ftpClientLib.h
 
 .PHONY : clean
 clean :
-	rm server/server server/ftpServer.o client/client client/ftpClient.o
+	rm server/server $(serverObjs) client/client $(clientObjs)

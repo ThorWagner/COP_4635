@@ -1,177 +1,141 @@
-#include "ftpServer.h"
+#include "../include/ftpServerLib.h"
+#include "../include/global.h"
 
-void initServer(int *serverFD, struct sockaddr_in *servAddr, int portNum);
-void *threadedHandler(void *serverFD);
-void parseFilename(char *msg, char *filename);
-bool transmitFile(int serverFD, char *filename);
-void sigintHandler(int sig);
+/* -- Global Variables -- */
+
+// Flag to stop threaded handling of clients
+extern bool g_running;
+
+// Counter to keep track of active users
+extern int g_current;
+
+// Counter to keep track of total visitors
+extern int g_all;
+
+// Counter to keep track of active users
+//volatile int g_current = 0;
+
+// Counter to keep track of total system visitors
+//volatile int g_all = 0;
 
 int main(int argC, char **argV){
 
-    int serverFD = 0;
-    int clientFD = 0;
-    int addrLen = 0;
-    int status = 0;
-    int *newSocket = NULL;
-    struct sockaddr_in serverAddr;
-    //struct sockaddr_in clientAddr;
+    int servSock = 0;
+    int portNum = 0;
+//    int current = 0;
+//    int all = 0;
+    struct sockaddr_in servAddr;
+//    conn_t *connection = NULL;
+    pthread_t thread;
 
-    addrLen = sizeof(struct sockaddr_in);
-    newSocket = malloc(sizeof(int));
+    // Initialization of global variables
+    g_running = true;
+    g_current = 0;
+    g_all = 0;
+//    g_current = malloc(sizeof(int));
+//    *g_current = 0;
+//    g_all = malloc(sizeof(int));
+//    *g_all = 0;
 
-    initServer(&serverFD, &serverAddr, DEF_PORT);
+    if(argC > 2){
 
-    status = listen(serverFD, WAIT_SIZE);
-    if(status < 0){
-
-        fprintf(stderr, "\nFailed to connect.\n\n\n");
-        close(serverFD);
+        fprintf(stderr, "\nProper usage: ./server   OR   ./server [port]\n\n");
         return 1;
 
     }
-    else
-        printf("Server connected.\n\n")
 
-    // Handle keyboard interrupt [^C]
-    signal(SIGINT, sigintHandler);
+    portNum = setPort(argC, argV);
 
-    while(1){
+    initServer(&servSock, &servAddr, portNum);
 
-        clientFD = accept(serverFD, (struct sockaddr *)&serverAddr,
-            (socklen_t *)&addrLen);
+    //signal(SIGINT, sigintHandler);
 
-        if(clientFD < 0)
-            fprintf(stderr, "Connection terminated unexpectedly.\n\n");
-        else{
+/*    while(1){
 
-            printf("Creating thread.\n\n");
-            pthread_t newConnect;
-            newSocket = malloc(sizeof(int));
-            *newSocket = clientFD;
-            pthread_create(&newConnect, NULL, threadedHandler, (void *)newSocket);
-            pthread_join(newConnect, NULL);
+        connectClient(servSock, connection, &thread);
+
+    }
+*/
+
+/*    int opt = 0;
+    bool running = true;
+    pid_t pid = fork();
+    if((int)pid == 0){
+
+        while(1)
+            connectClient(servSock, connection, &thread);
+
+    }
+    else{
+
+        while(running){
+
+            opt = serverMenu();
+            switch(opt){
+
+                case 1:
+                    printf("\nShutting down server...\n\n");
+                    kill(pid, SIGKILL);
+                    running = false;
+                    break;
+
+                case 2:
+                    printf("\nActive users: %d\n", current);
+                    break;
+
+                case 3:
+                    printf("\nAll system visitors: %d\n", all);
+                    break;
+
+                default:
+                    printf("\nAn error occured.\n\n");
+                    break;
+
+            }
 
         }
 
     }
+*/
+
+    int opt = 0;
+    bool running = true;
+    pthread_create(&thread, 0, threadedMonitor, (void *)&servSock);
+    do{
+
+        opt = serverMenu();
+        switch(opt){
+
+            case 1:
+                running = false;
+                //close(servSock);
+                shutdown(servSock, SHUT_RDWR);
+                //pthread_cancel(thread);
+                g_running = false;
+                break;
+
+            case 2:
+                printf("\nActive users: %d\n", g_current);
+                break;
+
+            case 3:
+                printf("\nAll system visitors: %d\n", g_all);
+                break;
+
+            default:
+                printf("\nAn error occured.\n\n");
+                break;
+
+        }
+
+    }while(running);
+
+    pthread_join(thread, NULL);
+    printf("Shutting down server...\n\n");
+
+    //close(servSock);
 
     return 0;
-
-}
-
-void initServer(int *serverFD, struct sockaddr_in *serverAddr, int portNum){
-
-    int status = 0;
-    int addrLen = 0;
-
-    addrLen = sizeof(struct sockaddr_in);
-
-    // Create the Server socket file descriptor
-    *serverFD = socket(AF_INET, SOCK_STREAM, 0);
-    if(*serverFD < 0){
-
-        fprintf(stderr, "\nFailed to create socket.\n\n\n");
-        exit(EXIT_FAILURE);
-
-    }
-
-    memset(serverAddr, 0, addrLen);
-    serverAddr->sin_family = AF_INET;
-    serverAddr->sin_addr.s_addr = INADDR_ANY;
-    serverAddr->sin_port = htons(portNum);
-
-    // Bind the Server socket
-    status = bind(*serverFD, (struct sockaddr *)serverAddr, addrLen);
-    if(status < 0){
-
-        fprintf(stderr, "\nFailed to bind socket.\n\n\n");
-        close(*serverFD);
-        exit(EXIT_FAILURE);
-
-    }
-    else
-        printf("\n\nServer started on port: %d\n\n", portNum);
-
-    return;
-
-}
-
-void *threadedHandler(void *serverFD){
-
-    int socket = 0;
-    int valRead = 0;
-    char filename[PARAM_SIZE] = {0};
-    char msg[BUFFER_SIZE] = {0};
-
-    socket = *(int *)serverFD;
-
-    valRead = recv(socket, msg, BUFFER_SIZE, 0);
-    if(valRead > 0){
-
-        parseFilename(msg, filename);
-        memset(msg, 0, BUFFER_SIZE);
-
-        // Check if file exists
-        if(access(filename, F_OK) != -1){
-
-            strcpy(msg, "OK");
-            send(socket, msg, strlen(msg), 0);
-            transmitFile(socket, filename);
-
-        }
-        else{
-
-            strcpy(msg, "NO");
-            send(socket, msg, strlen(msg), 0);
-
-        }
-
-    }
-
-    close(socket);
-
-    return NULL;
-
-}
-
-void parseFilename(char *msg, char *filename){
-
-    char *temp = NULL;
-
-    temp = strchr(msg, ' ');
-    strcpy(filename, temp + 1);
-
-    return;
-
-}
-
-bool transmitFile(int serverFD, char *filename){
-
-    int newFD = 0;
-    int size = 0;
-    bool sent = false;
-    struct stat file;
-
-    stat(filename, &file);
-    newFD = open(filename, O_RDONLY);
-    size = file.st_size;
-    send(serverFD, &size, sizeof(int), 0);
-    if(sendfile(serverFD, newFD, NULL, size) != -1)
-        sent = true;
-
-    return sent;
-
-}
-
-void sigintHandler(int sig){
-
-    // Verify server process is ending
-    fprintf(stderr, "\nShutting down server...\n\n\n");
-
-    // Return SIGINT
-    exit(sig);
-    
-    return;
 
 }
 
