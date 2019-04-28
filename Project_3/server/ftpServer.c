@@ -14,15 +14,12 @@ int main(int argC, char **argV){
     int status = 0;
     int *newSocket = NULL;
     struct sockaddr_in serverAddr;
-    struct sockaddr_in clientAddr;
+    //struct sockaddr_in clientAddr;
 
     addrLen = sizeof(struct sockaddr_in);
     newSocket = malloc(sizeof(int));
 
     initServer(&serverFD, &serverAddr, DEF_PORT);
-
-    // Handle keyboard interrupt [^C]
-    signal(SIGINT, sigintHandler);
 
     status = listen(serverFD, WAIT_SIZE);
     if(status < 0){
@@ -32,14 +29,29 @@ int main(int argC, char **argV){
         return 1;
 
     }
+    else
+        printf("Server connected.\n\n")
 
-    while((clientFD = accept(serverFD, (struct sockaddr *)&clientAddr,
-    (socklen_t *)&addrLen))){
+    // Handle keyboard interrupt [^C]
+    signal(SIGINT, sigintHandler);
 
-        pthread_t newConnect;
-        *newSocket = clientFD;
-        pthread_create(&newConnect, NULL, threadedHandler, (void *)newSocket);
-        pthread_join(newConnect, NULL);
+    while(1){
+
+        clientFD = accept(serverFD, (struct sockaddr *)&serverAddr,
+            (socklen_t *)&addrLen);
+
+        if(clientFD < 0)
+            fprintf(stderr, "Connection terminated unexpectedly.\n\n");
+        else{
+
+            printf("Creating thread.\n\n");
+            pthread_t newConnect;
+            newSocket = malloc(sizeof(int));
+            *newSocket = clientFD;
+            pthread_create(&newConnect, NULL, threadedHandler, (void *)newSocket);
+            pthread_join(newConnect, NULL);
+
+        }
 
     }
 
@@ -77,6 +89,8 @@ void initServer(int *serverFD, struct sockaddr_in *serverAddr, int portNum){
         exit(EXIT_FAILURE);
 
     }
+    else
+        printf("\n\nServer started on port: %d\n\n", portNum);
 
     return;
 
