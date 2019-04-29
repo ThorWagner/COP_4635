@@ -148,6 +148,8 @@ int clientMenu(void){
             opt = 4;
         else if(strcasecmp(command, "pwd") == 0)
             opt = 5;
+        else
+            printf("\n\'%s\' is not a valid command.\n\n", command);
 
     }while(opt == 0);
 

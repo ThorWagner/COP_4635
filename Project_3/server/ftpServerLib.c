@@ -389,6 +389,8 @@ int serverMenu(void){
             opt = 2;
         else if(strcasecmp(command, "count all") == 0)
             opt = 3;
+        else
+            printf("\n\'%s\' is not a valid command.\n", command);
 
     }while(opt == 0);
 
