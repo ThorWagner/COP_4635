@@ -1,4 +1,24 @@
+/** @file ftpServer.c
+ *  @brief Main Server program driver
+ *
+ *  This file contains the main program body for the FTP Server. It relies on
+ *  function definitions and static definitions made in 'ftpServerLib.c' and
+ *  'ftpServerLib.h' as well as global variable declared in 'global.h'. A
+ *  persistent TCP connection is formed with each FTP Client via independent
+ *  to allow for simultaneous Client requests.
+ *
+ *  @author Michael Wagner
+ *  @date 04/28/2019
+ *  @info Course COP 4635
+ *  @bug No known bugs.
+ */
+
+/* -- Includes -- */
+
+/* FTP Server header */
 #include "../include/ftpServerLib.h"
+
+/* Global Variable header */
 #include "../include/global.h"
 
 /* -- Global Variables -- */
@@ -12,30 +32,32 @@ extern int g_current;
 // Counter to keep track of total visitors
 extern int g_all;
 
-// Counter to keep track of active users
-//volatile int g_current = 0;
-
-// Counter to keep track of total system visitors
-//volatile int g_all = 0;
-
+/** @brief Main Server program driver
+ *  
+ *  Primary functionality of the FTP Server program. Attempts to start the
+ *  Server on the specified port (or default if none provided) and begin
+ *  listening for incoming FTP Client connections. Runs continuously until the
+ *  exit command is received, with separate threads handling user input,
+ *  connection monitors, and connection handling. Allows the user to 1) Display
+ *  the number of active Client connections, 2) Display the total number of
+ *  system visitors since startup, 3) Ask for sarcastic help, and 4) Exit the
+ *  Server.
+ *
+ *  @param argC - Provided by the system, indicats the number of arguments
+ *  @param argV - Provided by the system, contains all argument strings
+ *  @return 0 on exit
+ */
 int main(int argC, char **argV){
 
     int servSock = 0;
     int portNum = 0;
-//    int current = 0;
-//    int all = 0;
     struct sockaddr_in servAddr;
-//    conn_t *connection = NULL;
     pthread_t thread;
 
     // Initialization of global variables
     g_running = true;
     g_current = 0;
     g_all = 0;
-//    g_current = malloc(sizeof(int));
-//    *g_current = 0;
-//    g_all = malloc(sizeof(int));
-//    *g_all = 0;
 
     if(argC > 2){
 
@@ -48,56 +70,6 @@ int main(int argC, char **argV){
 
     initServer(&servSock, &servAddr, portNum);
 
-    //signal(SIGINT, sigintHandler);
-
-/*    while(1){
-
-        connectClient(servSock, connection, &thread);
-
-    }
-*/
-
-/*    int opt = 0;
-    bool running = true;
-    pid_t pid = fork();
-    if((int)pid == 0){
-
-        while(1)
-            connectClient(servSock, connection, &thread);
-
-    }
-    else{
-
-        while(running){
-
-            opt = serverMenu();
-            switch(opt){
-
-                case 1:
-                    printf("\nShutting down server...\n\n");
-                    kill(pid, SIGKILL);
-                    running = false;
-                    break;
-
-                case 2:
-                    printf("\nActive users: %d\n", current);
-                    break;
-
-                case 3:
-                    printf("\nAll system visitors: %d\n", all);
-                    break;
-
-                default:
-                    printf("\nAn error occured.\n\n");
-                    break;
-
-            }
-
-        }
-
-    }
-*/
-
     int opt = 0;
     bool running = true;
     pthread_create(&thread, 0, threadedMonitor, (void *)&servSock);
@@ -108,9 +80,7 @@ int main(int argC, char **argV){
 
             case 1:
                 running = false;
-                //close(servSock);
                 shutdown(servSock, SHUT_RDWR);
-                //pthread_cancel(thread);
                 g_running = false;
                 break;
 
@@ -132,8 +102,6 @@ int main(int argC, char **argV){
 
     pthread_join(thread, NULL);
     printf("Shutting down server...\n\n");
-
-    //close(servSock);
 
     return 0;
 

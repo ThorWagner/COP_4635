@@ -1,31 +1,60 @@
+/** @file ftpClient.c
+ *  @brief Main Client program driver
+ *
+ *  This file contains the main program body for the FTP Client. It relies on
+ *  function definition and static definitions made in 'ftpClientLib.c' and
+ *  'ftpClientLib.h'. A persistant TCP connection is formed with the Server so
+ *  the client can make multiple requests.
+ *
+ *  @author Michael Wagner
+ *  @date 04/28/2019
+ *  @info Course COP 4635
+ *  @bug No known bugs.
+ */
+
+/* -- Includes -- */
+
+/* FTP Client header */
 #include "../include/ftpClientLib.h"
 
+/* Inherited from header files:
+ *
+ * <stdio.h>            - Needed for printf(), fprintf(), and BUFSIZ
+ * <stdlib.h>           - Needed for NULL
+ * <string.h>           - Needed for memset()
+ * <stdbool.h>          - Needed for boolean data type
+ * <unistd.h>           - Needed for close()
+ * <fcntl.h>            - Needed for open()
+ * <arpa/inet.h>        - Needed for struct sockaddr_in
+ *
+ */
+
+/** @brief Main Client program driver.
+ *  
+ *  Primary functionality of the FTP Client program. Attempts to start the
+ *  Client on the specified port (or default if none provided) and connected to
+ *  FTP Sever, continually asks for user commands until exited by user. Allows
+ *  the user to 1) Display files on the FTP Server, 2) Download file from FTP
+ *  Server, 3) Upload file to the FTP Server, 4) Display the working directory,
+ *  5) Ask for sarcastic help, and 6) Exit the Client.
+ *
+ *  @param argC - Provided by the system, indicates the number of arguments
+ *  @param argV - Provided by the system, contains all argument strings
+ *  @return 0 on exit
+ */
 int main(int argC, char **argV){
 
     int portNum = 0;
     int newSock = 0;
     int opt = 0;
-    char filename[BUFSIZ] = {0};
-    bool running = false;
-    //int length = 0;
-    //int status = 0;
-    struct sockaddr_in address;
-    //struct hostent *host = NULL;
-
-    // Temp
     int newFD = 0;
     int filesize = 0;
     char msg1[BUFSIZ] = {0};
     char msg2[BUFSIZ] = {0};
+    char filename[BUFSIZ] = {0};
     char *data = NULL;
-
-/*    if(argC != 4){
-
-        printf("Proper usage: ./client [hostname] [port] [message]\n");
-        return 1;
-
-    }
-*/
+    bool running = false;
+    struct sockaddr_in address;
 
     if(argC > 2){
 
@@ -34,71 +63,9 @@ int main(int argC, char **argV){
 
     }
 
-/*    portNum = atoi(argV[2]);
-    if(portNum <= 0){
-
-        fprintf(stderr, "Invalid port number.\n");
-        return 1;
-
-    }
-*/
-
     portNum = setPort(argC, argV);
 
-/*    newSock = socket(AF_INET, SOCK_STREAM, 0);
-    if(newSock <= 0){
-
-        fprintf(stderr, "Could not create socket.\n");
-        return 1;
-
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_port = htons(portNum);
-    host = gethostbyname(argV[1]);
-    if(!host){
-
-        fprintf(stderr, "Unknown host '%s'.\n", argV[1]);
-        return 1;
-
-    }
-
-    memcpy(&address.sin_addr, host->h_addr_list[0], host->h_length);
-    status = connect(newSock, (struct sockaddr *)&address, sizeof(address));
-    if(status != 0){
-
-        fprintf(stderr, "Could not connect to host '%s'.\n", argV[1]);
-        return 1;
-
-    }
-*/
-
     initClient(&newSock, &address, portNum);
-
-/*    length = strlen(argV[3]);
-    write(newSock, &length, sizeof(int));
-    write(newSock, argV[3], length);
-    close(newSock);
-*/
-
-    // Temp
-/*    strcpy(msg1, "GET ");
-    strcat(msg1, "a.txt");
-    write(newSock, msg1, strlen(msg1));
-    recv(newSock, msg2, 2, 0);
-    if(strcmp(msg2, "OK") == 0){
-
-        recv(newSock, &filesize, sizeof(int), 0);
-        data = malloc(filesize);
-        newFD = open("a.txt", O_CREAT | O_EXCL | O_WRONLY, 0666);
-        recv(newSock, data, filesize, 0);
-        write(newFD, data, filesize);
-        close(newFD);
-
-    }
-    else
-        fprintf(stderr, "\nInvalid filename.\n\n");
-*/
 
     strcpy(msg1, "LOGON");
     write(newSock, msg1, strlen(msg1));
@@ -113,14 +80,12 @@ int main(int argC, char **argV){
         switch(opt){
 
             case 1:
-                //memset(msg1, 0, BUFSIZ);
                 strcpy(msg1, "LOGOFF");
                 write(newSock, msg1, strlen(msg1));
                 running = false;
                 break;
 
             case 2:
-                //memset(msg1, 0, BUFSIZ);
                 strcpy(msg1, "LS");
                 write(newSock, msg1, strlen(msg1));
                 recv(newSock, msg2, BUFSIZ, 0);
@@ -128,9 +93,6 @@ int main(int argC, char **argV){
                 break;
 
             case 3:
-                //memset(filename, 0, NAME_SIZE);
-                //memset(msg1, 0, BUFSIZ);
-                //memset(msg2, 0, BUFSIZ);
                 printf("\nEnter the filename: ");
                 scanf("\n\n%s", filename);
                 strcpy(msg1, "GET ");
@@ -154,9 +116,6 @@ int main(int argC, char **argV){
                 break;
 
             case 4:
-                //memset(filename, 0, NAME_SIZE);
-                //memset(msg1, 0, BUFSIZ);
-                //memset(msg2, 0, BUFSIZ);
                 printf("\nEnter the filename: ");
                 scanf("\n\n%s", filename);
                 strcpy(msg1, "PUT ");
@@ -172,7 +131,6 @@ int main(int argC, char **argV){
                 break;
 
             case 5:
-                //memset(msg1, 0, BUFSIZ);
                 if(getcwd(msg1, BUFSIZ) != NULL)
                     printf("\nCurrent working directory:\n\n\t%s\n\n", msg1);
                 else
