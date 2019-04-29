@@ -1,9 +1,9 @@
 /** @file ftpServerLib.h
  *  @brief Overall process management for the FTP Client
  *
- *  This file contains the prototyping and static definitions used to initialize
- *  and run the FTP Server with persistant communication to FTP Clients via
- *  independent threads and respond to continuous user input.
+ *  This file contains the funtion definitions to initialize and run the FTP
+ *  Server with persistant communication to FTP Clients via independent threads
+ *  and ability to respond to continuous user input.
  *
  *  @author Michael Wagner
  *  @date 04/28/2019

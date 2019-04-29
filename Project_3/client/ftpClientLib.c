@@ -1,10 +1,9 @@
 /** @file ftpClientLib.c
  *  @brief Overall process management for the FTP Client.
  *
- *  This file contains the main program body for the FTP Client. It relies on
- *  function definition and static definitions made in 'ftpClientLib.c' and
- *  'ftpClientLib.h'. A persistant TCP connection is formed with the Server so
- *  the client can make multiple requests.
+ *  This file contains function definitions to initialize and run the FTP
+ *  Client with persistant communication to the FTP Server and ability to
+ *  respond to continuous user input.
  *
  *  @author Michael Wagner
  *  @date 04/28/2019
